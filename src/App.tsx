@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useRawInitData } from '@tma.js/sdk-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import './App.css'
 
 interface Pet {
@@ -39,7 +39,7 @@ function App() {
     console.error('Ошибка парсинга initData', e)
   }
 
-  const username = user?.username || user?.first_name || 'чел'
+  //const username = user?.username || user?.first_name || 'чел'
   const firstName = user?.first_name || ''
   const lastName = user?.last_name || ''
 
@@ -317,7 +317,6 @@ function App() {
   }
 
   if (showPetSelection) {
-    const currentSeason = seasons.find(s => s.name === selectedPet?.season)
     
     return (
       <div style={{ 
