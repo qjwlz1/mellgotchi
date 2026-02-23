@@ -571,3 +571,96 @@ input, textarea {
   -webkit-user-select: auto;
   user-select: auto;
 }
+/* Магазин кейсов */
+.case-shop {
+  width: 100%;
+  max-width: 600px;
+  margin: 16px auto;
+}
+
+.case-shop-button {
+  background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+  border: none;
+  padding: 12px 24px;
+  border-radius: 30px;
+  color: #000;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s;
+}
+
+.cases-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.case-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  border-radius: 20px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.case-card:hover {
+  border-color: #ffd700;
+  transform: translateY(-2px);
+}
+
+.case-emoji {
+  font-size: 3rem;
+}
+
+.case-name {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.case-description {
+  font-size: 0.9rem;
+  color: #ccc;
+  text-align: center;
+}
+
+.case-price {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #4caf50;
+  margin-top: 8px;
+}
+
+/* Адаптация для кейсов на мобилках */
+@media (max-width: 480px) {
+  .cases-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .case-card {
+    flex-direction: row;
+    text-align: left;
+    gap: 16px;
+  }
+  
+  .case-emoji {
+    font-size: 2.5rem;
+  }
+  
+  .case-info {
+    flex: 1;
+  }
+  
+  .case-price {
+    margin-top: 0;
+  }
+}

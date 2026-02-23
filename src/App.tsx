@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import './App.css'
 
 interface Pet {
+  id: number
   name: string
   rarity: string
   season: string
@@ -12,6 +13,15 @@ interface Pet {
   catchPhrase: string
   evolutionStage: number
   happiness: number
+  location: string
+}
+
+interface Case {
+  id: string
+  name: string
+  description: string
+  price: number
+  emoji: string
 }
 
 function App() {
@@ -19,17 +29,19 @@ function App() {
   const [level, setLevel] = useState(1)
   const [xp, setXp] = useState(0)
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null)
-  const [pets, setPets] = useState<Pet[]>([])
+  const [myPets, setMyPets] = useState<Pet[]>([])
   const [showPetSelection, setShowPetSelection] = useState(true)
   const [feedCount, setFeedCount] = useState(0)
   const [specialTriggered, setSpecialTriggered] = useState(false)
-  const [murkocoin, setMurkocoin] = useState(0)
+  const [murkocoin, setMurkocoin] = useState(500) // Дал немного монет для теста
   const [inventory, setInventory] = useState<string[]>([])
   
   // Состояния для рулетки
   const [isSpinning, setIsSpinning] = useState(false)
   const [spinResult, setSpinResult] = useState<Pet | null>(null)
   const [showWheel, setShowWheel] = useState(true)
+  //const [selectedCase, setSelectedCase] = useState<Case | null>(null)
+  const [showCaseShop, setShowCaseShop] = useState(false)
 
   const rawInitData = useRawInitData()
 
@@ -45,95 +57,120 @@ function App() {
   }
 
   const firstName = user?.first_name || ''
-  // const lastName = user?.last_name || ''
 
-  // Редкости с мемными цветами
-  const rarities = [
-    { name: 'кринжовый', chance: 50, color: '#808080', emoji: '😬' },
-    { name: 'рофловый', chance: 25, color: '#4caf50', emoji: '😂' },
-    { name: 'шизовый', chance: 15, color: '#9c27b0', emoji: '🤪' },
-    { name: 'легендарный', chance: 8, color: '#f44336', emoji: '👑' },
-    { name: 'биполярный', chance: 2, color: '#ff00ff', emoji: '⚡' },
+  // База данных питомцев из твоей таблицы
+  const petsDatabase: Pet[] = [
+    // Обычные (7.14% каждый)
+    { id: 1, name: 'Ч', rarity: 'обычный', season: 'all', emoji: '😶', specialAbility: 'молчание', catchPhrase: 'ч', location: 'all', evolutionStage: 1, happiness: 100 },
+    { id: 2, name: 'Друн', rarity: 'обычный', season: 'all', emoji: '😎', specialAbility: 'кринж', catchPhrase: 'омайгад', location: 'all', evolutionStage: 1, happiness: 100 },
+    { id: 9, name: '1 курс', rarity: 'обычный', season: 'общага', emoji: '🧑‍🎓', specialAbility: 'первач', catchPhrase: 'посвятуха', location: 'общага', evolutionStage: 1, happiness: 100 },
+    { id: 10, name: '2 курс', rarity: 'обычный', season: 'общага', emoji: '🧑‍🎓', specialAbility: 'старенький', catchPhrase: 'уже не первак', location: 'общага', evolutionStage: 1, happiness: 100 },
+    { id: 16, name: 'Паучность', rarity: 'обычный', season: 'молочное', emoji: '🕷️', specialAbility: 'паутина', catchPhrase: 'пауки атакуют', location: 'молочное', evolutionStage: 1, happiness: 100 },
+    { id: 18, name: 'Мыти', rarity: 'обычный', season: 'мытищи', emoji: '🏭', specialAbility: 'мытищский', catchPhrase: 'слушай братан', location: 'мытищи', evolutionStage: 1, happiness: 100 },
+    { id: 19, name: 'Вкусность', rarity: 'обычный', season: 'all', emoji: '🍔', specialAbility: 'вкуснота', catchPhrase: 'нямка', location: 'all', evolutionStage: 1, happiness: 100 },
+    
+    // Редкие (5.4% каждый)
+    { id: 3, name: 'Фог', rarity: 'редкий', season: 'общага-молочное', emoji: '🌫️', specialAbility: 'туман', catchPhrase: 'выхожу из тумана', location: 'общага-молочное', evolutionStage: 1, happiness: 100 },
+    { id: 4, name: 'Дод', rarity: 'редкий', season: 'баня', emoji: '🛁', specialAbility: 'парилка', catchPhrase: 'жарко', location: 'баня', evolutionStage: 1, happiness: 100 },
+    { id: 11, name: '3 курс', rarity: 'редкий', season: 'общага', emoji: '🧑‍🎓', specialAbility: 'опытный', catchPhrase: 'уже всё знаю', location: 'общага', evolutionStage: 1, happiness: 100 },
+    { id: 15, name: 'Пакость', rarity: 'редкий', season: 'мурино', emoji: '👻', specialAbility: 'шалость', catchPhrase: 'эщкере', location: 'мурино', evolutionStage: 1, happiness: 100 },
+    { id: 20, name: 'Бурмалда', rarity: 'редкий', season: 'all', emoji: '🐦', specialAbility: 'бурмалданье', catchPhrase: 'бур-бур', location: 'all', evolutionStage: 1, happiness: 100 },
+    
+    // Эпические (3% каждый)
+    { id: 5, name: 'Прадод', rarity: 'эпический', season: 'баня', emoji: '🛁✨', specialAbility: 'суперпар', catchPhrase: 'предок в бане', location: 'баня', evolutionStage: 1, happiness: 100 },
+    { id: 12, name: '4 курс', rarity: 'эпический', season: 'общага', emoji: '🧑‍🎓✨', specialAbility: 'диплом', catchPhrase: 'скоро выпуск', location: 'общага', evolutionStage: 1, happiness: 100 },
+    { id: 14, name: 'Омайгадность', rarity: 'эпический', season: 'all', emoji: '😱', specialAbility: 'шок', catchPhrase: 'ОМАЙГАД', location: 'all', evolutionStage: 1, happiness: 100 },
+    { id: 21, name: 'Птичка-бурмалдичка', rarity: 'эпический', season: 'мытищи', emoji: '🐦✨', specialAbility: 'поет', catchPhrase: 'ла-ла-ла', location: 'мытищи', evolutionStage: 1, happiness: 100 },
+    
+    // Легендарные (2% каждый)
+    { id: 6, name: 'Прапрадод', rarity: 'легендарный', season: 'баня', emoji: '🛁👑', specialAbility: 'древний жар', catchPhrase: 'пращур', location: 'баня', evolutionStage: 1, happiness: 100 },
+    { id: 8, name: 'Артур', rarity: 'легендарный', season: 'мытищи', emoji: '👑', specialAbility: 'король', catchPhrase: 'слушай братан', location: 'мытищи', evolutionStage: 1, happiness: 100 },
+    { id: 13, name: '5 курс', rarity: 'легендарный', season: 'общага', emoji: '🧑‍🎓👑', specialAbility: 'выпускник', catchPhrase: 'диплом защитил', location: 'общага', evolutionStage: 1, happiness: 100 },
+    
+    // Мифические (2% каждый - да, в таблице так)
+    { id: 7, name: 'Друнный коллайдер', rarity: 'мифический', season: 'мурино', emoji: '⚡', specialAbility: 'коллайдер', catchPhrase: 'энергия', location: 'мурино', evolutionStage: 1, happiness: 100 },
+    { id: 22, name: 'Поез', rarity: 'мифический', season: 'мурино-молочное', emoji: '🚂', specialAbility: 'чух-чух', catchPhrase: 'трамвай едет', location: 'мурино-молочное', evolutionStage: 1, happiness: 100 },
+    
+    // Божественный (1%)
+    { id: 17, name: 'Галактическая омайгадность', rarity: 'божественный', season: 'all', emoji: '🌌', specialAbility: 'космос', catchPhrase: 'ОМАЙГАД ВО ВСЕЛЕННОЙ', location: 'all', evolutionStage: 1, happiness: 100 },
   ]
 
-  // Сезоны с их особенностями
-  const seasons = [
-    { 
-      name: 'общага', 
-      emoji: '🏢',
-      bgGradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      abilities: ['украсть печеньку', 'забить на пары'],
-      catchPhrases: ['бомбит пукан', 'крашнулся', 'жиза']
+  // Кейсы
+  const cases: Case[] = [
+    {
+      id: 'starter',
+      name: 'Начальный кейс',
+      description: 'Ч, Друн, Фог, 1 курс',
+      price: 0,
+      emoji: '📦'
     },
-    { 
-      name: 'мурино', 
-      emoji: '🌫️',
-      bgGradient: 'linear-gradient(135deg, #1e1e2f 0%, #2a2a40 100%)',
-      abilities: ['раствориться в тумане', 'вызвать самосбор'],
-      catchPhrases: ['выхожу из тумана', 'эщкере', 'самосбор едет']
-    },
-    { 
-      name: 'молочное', 
-      emoji: '🕷️',
-      bgGradient: 'linear-gradient(135deg, #2c3e50 0%, #3498db 100%)',
-      abilities: ['напустить пауков', 'трамвайный гудок'],
-      catchPhrases: ['пауки атакуют', 'трамвай не придет', 'степь зовет']
-    },
-    { 
-      name: 'мытищи', 
-      emoji: '🏭',
-      bgGradient: 'linear-gradient(135deg, #4b6cb7 0%, #182848 100%)',
-      abilities: ['водяной экстрим', 'хованский зов'],
-      catchPhrases: ['батискаф едет', 'слушай братан', 'по кайфу']
-    },
+    {
+      id: 'test',
+      name: 'Тестовый кейс',
+      description: 'Абсолютно все питомцы!',
+      price: 100,
+      emoji: '🎲'
+    }
   ]
 
-  // Мемные имена для питомцев
-  const petNames = [
-    'Мелстрой', 'Туман', 'Самосбор', 'Паучок', 'Гном', 'Друн',
-    'Краш', 'Шайлушай', 'Бомбила', 'Читер', 'Бабуин', 'Скуф'
-  ]
+  // Редкости для отображения
+  const rarityConfig: { [key: string]: { color: string, emoji: string } } = {
+    'обычный': { color: '#808080', emoji: '😬' },
+    'редкий': { color: '#4caf50', emoji: '😂' },
+    'эпический': { color: '#9c27b0', emoji: '🤪' },
+    'легендарный': { color: '#f44336', emoji: '👑' },
+    'мифический': { color: '#ff9800', emoji: '⚡' },
+    'божественный': { color: '#ffeb3b', emoji: '🌌' },
+  }
 
-  const generatePet = (): Pet => {
-    let rarityRoll = Math.random() * 100
-    let cumulativeChance = 0
-    let rarity = rarities[0]
-
-    for (const r of rarities) {
-      cumulativeChance += r.chance
-      if (rarityRoll <= cumulativeChance) {
-        rarity = r
-        break
-      }
+  // Открыть кейс
+  const openCase = (caseId: string) => {
+    let availablePets: Pet[] = []
+    
+    if (caseId === 'starter') {
+      // Начальный кейс: только Ч, Друн, Фог, 1 курс
+      availablePets = petsDatabase.filter(pet => 
+        [1, 2, 3, 9].includes(pet.id) // Ч(1), Друн(2), Фог(3), 1 курс(9)
+      )
+    } else if (caseId === 'test') {
+      // Тестовый кейс: все питомцы
+      availablePets = petsDatabase
     }
 
-    const season = seasons[Math.floor(Math.random() * seasons.length)]
-    const name = `${rarity.name} ${season.name}-${petNames[Math.floor(Math.random() * petNames.length)]}`
+    if (availablePets.length === 0) return
+
+    // Рандомный выбор питомца
+    const randomIndex = Math.floor(Math.random() * availablePets.length)
+    const newPet = { ...availablePets[randomIndex] }
     
-    return { 
-      name, 
-      rarity: rarity.name, 
-      season: season.name,
-      emoji: season.emoji,
-      specialAbility: season.abilities[Math.floor(Math.random() * season.abilities.length)],
-      catchPhrase: season.catchPhrases[Math.floor(Math.random() * season.catchPhrases.length)],
-      evolutionStage: 1,
-      happiness: 100
+    // Добавляем питомца в коллекцию
+    setMyPets(prev => [...prev, newPet])
+    
+    // Показываем результат
+    window.Telegram?.WebApp?.showPopup?.({
+      message: `🎉 Вы получили: ${newPet.name} (${newPet.rarity})! ${newPet.catchPhrase}`,
+      buttons: [{ text: 'ВАУ' }]
+    })
+
+    // Если это первый питомец и нет выбранного, предлагаем выбрать
+    if (myPets.length === 0 && !selectedPet) {
+      setShowPetSelection(true)
+      setShowWheel(false)
     }
   }
 
-  // Генерация 4х питомцев для рулетки при загрузке
+  // Генерация начальных питомцев для рулетки (теперь из начального кейса)
   useEffect(() => {
-    if (pets.length === 0) {
-      const randomPets: Pet[] = []
-      for (let i = 0; i < 4; i++) {
-        randomPets.push(generatePet())
-      }
-      setPets(randomPets)
+    if (myPets.length === 0) {
+      // Создаем 4х питомцев для превью из начального кейса
+      const starterPets = petsDatabase.filter(pet => 
+        [1, 2, 3, 9].includes(pet.id)
+      )
+      setMyPets(starterPets)
     }
   }, [])
 
-  // Функция для рулетки
+  // Функция для рулетки (теперь открывает начальный кейс)
   const spinWheel = () => {
     if (isSpinning) return
     
@@ -141,35 +178,31 @@ function App() {
     setSpinResult(null)
     
     // Анимация прокрутки
-    const spinDuration = 2000 // 2 секунды
-    const spinInterval = 50 // обновление каждые 50мс
+    const spinDuration = 2000
+    const spinInterval = 50
     let spins = 0
     const maxSpins = spinDuration / spinInterval
     
     const interval = setInterval(() => {
-      // Показываем случайного питомца во время прокрутки
-      const randomIndex = Math.floor(Math.random() * pets.length)
-      setSpinResult(pets[randomIndex])
+      // Показываем случайного питомца из начального кейса
+      const starterPets = petsDatabase.filter(pet => 
+        [1, 2, 3, 9].includes(pet.id)
+      )
+      const randomIndex = Math.floor(Math.random() * starterPets.length)
+      setSpinResult(starterPets[randomIndex])
       
       spins++
       if (spins >= maxSpins) {
         clearInterval(interval)
-        // Выбираем финального питомца
-        const finalIndex = Math.floor(Math.random() * pets.length)
-        const finalPet = pets[finalIndex]
-        setSpinResult(finalPet)
+        // Открываем начальный кейс
+        openCase('starter')
         setIsSpinning(false)
-        
-        // Автоматически выбираем питомца после окончания рулетки
-        setTimeout(() => {
-          selectPet(finalPet)
-        }, 500)
+        setShowWheel(false)
       }
     }, spinInterval)
   }
 
   useEffect(() => {
-    // Таймер падения с мемными сообщениями
     const interval = setInterval(() => {
       if (!selectedPet) return
       
@@ -192,7 +225,6 @@ function App() {
         })
         setSelectedPet(null)
         setShowPetSelection(true)
-        setShowWheel(true)
       }
     }, 30000)
 
@@ -210,6 +242,7 @@ function App() {
         webApp.cloudStorage.setItem('xp', xp.toString())
         webApp.cloudStorage.setItem('murkocoin', murkocoin.toString())
         webApp.cloudStorage.setItem('feedCount', feedCount.toString())
+        webApp.cloudStorage.setItem('myPets', JSON.stringify(myPets))
         if (selectedPet) {
           webApp.cloudStorage.setItem('selectedPet', JSON.stringify(selectedPet))
         }
@@ -232,11 +265,15 @@ function App() {
       webApp.cloudStorage.getItem('feedCount').then(value => {
         if (value) setFeedCount(parseInt(value, 10))
       })
+      webApp.cloudStorage.getItem('myPets').then(value => {
+        if (value) {
+          setMyPets(JSON.parse(value))
+        }
+      })
       webApp.cloudStorage.getItem('selectedPet').then(value => {
         if (value) {
           setSelectedPet(JSON.parse(value))
           setShowPetSelection(false)
-          setShowWheel(false)
         }
       })
     }
@@ -246,7 +283,7 @@ function App() {
       saveData()
       window.removeEventListener('beforeunload', saveData)
     }
-  }, [omaygad, level, xp, selectedPet, murkocoin, feedCount])
+  }, [omaygad, level, xp, selectedPet, murkocoin, feedCount, myPets])
 
   // Ежедневные награды
   useEffect(() => {
@@ -271,7 +308,6 @@ function App() {
   const selectPet = (pet: Pet) => {
     setSelectedPet(pet)
     setShowPetSelection(false)
-    setShowWheel(false)
     window.Telegram?.WebApp?.showPopup?.({ 
       message: `🎉 Выбран ${pet.name}! ${pet.catchPhrase}!`, 
       buttons: [{ text: 'ПОГНАЛИ' }] 
@@ -323,6 +359,7 @@ function App() {
     setSpecialTriggered(true)
     setTimeout(() => setSpecialTriggered(false), 60000)
 
+    // Способности по сезонам
     switch(selectedPet.season) {
       case 'общага':
         setOmaygad(prev => Math.min(100, prev + 30))
@@ -340,11 +377,16 @@ function App() {
         setXp(prev => prev + 50)
         window.Telegram?.WebApp?.showPopup?.({ message: '💧 Водяной экстрим! +50 опыта', buttons: [{ text: 'ЭКСТРИМ' }] })
         break
+      default:
+        setOmaygad(prev => Math.min(100, prev + 20))
+        window.Telegram?.WebApp?.showPopup?.({ message: '✨ Случайная способность сработала!', buttons: [{ text: 'OK' }] })
     }
   }
 
-  // Если показываем рулетку
+  // Если показываем рулетку (начальный выбор)
   if (showWheel) {
+    const starterPets = petsDatabase.filter(pet => [1, 2, 3, 9].includes(pet.id))
+    
     return (
       <div className="app-container wheel-container">
         <motion.div
@@ -352,8 +394,8 @@ function App() {
           animate={{ opacity: 1, y: 0 }}
           className="wheel-header"
         >
-          <h1>🎰 КРУТИ РУЛЕТКУ!</h1>
-          <p>Привет, {firstName}! Выбери свой первый мем-питомец</p>
+          <h1>🎰 НАЧАЛЬНЫЙ КЕЙС!</h1>
+          <p>Привет, {firstName}! Крути и получи своего первого питомца</p>
         </motion.div>
 
         <div className="wheel-content">
@@ -373,7 +415,7 @@ function App() {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   className="wheel-result"
-                  style={{ background: rarities.find(r => r.name === spinResult.rarity)?.color + '30' }}
+                  style={{ background: rarityConfig[spinResult.rarity]?.color + '30' }}
                 >
                   <span className="wheel-emoji">{spinResult.emoji}</span>
                   <div className="wheel-name">{spinResult.name}</div>
@@ -381,7 +423,7 @@ function App() {
                 </motion.div>
               ) : (
                 <div className="wheel-placeholder">
-                  <span>❓</span>
+                  <span>📦</span>
                   <span>ЖМИ КРУТИТЬ</span>
                 </div>
               )}
@@ -396,19 +438,19 @@ function App() {
             onClick={spinWheel}
             disabled={isSpinning}
           >
-            {isSpinning ? '🎲 КРУТИТСЯ...' : '🎰 КРУТИТЬ РУЛЕТКУ'}
+            {isSpinning ? '🎲 КРУТИТСЯ...' : '🎰 ОТКРЫТЬ КЕЙС'}
           </motion.button>
 
           {/* Превью возможных питомцев */}
           <div className="wheel-preview">
-            <h3>Возможные питомцы:</h3>
+            <h3>В этом кейсе:</h3>
             <div className="preview-grid">
-              {pets.map((pet, index) => (
+              {starterPets.map((pet) => (
                 <motion.div
-                  key={index}
+                  key={pet.id}
                   className="preview-item"
                   whileHover={{ scale: 1.05 }}
-                  style={{ borderColor: rarities.find(r => r.name === pet.rarity)?.color }}
+                  style={{ borderColor: rarityConfig[pet.rarity]?.color }}
                 >
                   <span className="preview-emoji">{pet.emoji}</span>
                   <span className="preview-name">{pet.name}</span>
@@ -421,15 +463,15 @@ function App() {
     )
   }
 
-  // Основной игровой экран
-  if (showPetSelection && !showWheel) {
+  // Экран выбора питомца из коллекции
+  if (showPetSelection) {
     return (
       <div className="app-container selection-container">
         <motion.h1
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
         >
-          🎮 МелГотчи
+          🎮 Мои питомцы
         </motion.h1>
         
         <motion.p
@@ -437,25 +479,60 @@ function App() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
         >
-          Привет, {firstName}! Выбери питомца (или крутани рулетку заново)
+          Привет, {firstName}! Выбери питомца для игры
         </motion.p>
 
-        <motion.button
-          className="wheel-again-button"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => {
-            setShowWheel(true)
-            setSpinResult(null)
-            setIsSpinning(false)
-          }}
-        >
-          🎰 КРУТАНУТЬ РУЛЕТКУ ЕЩЕ РАЗ
-        </motion.button>
+        <div className="case-shop">
+          <motion.button
+            className="case-shop-button"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowCaseShop(!showCaseShop)}
+          >
+            🏪 МАГАЗИН КЕЙСОВ {showCaseShop ? '▼' : '▶'}
+          </motion.button>
+
+          {showCaseShop && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="cases-grid"
+            >
+              {cases.map(caseItem => (
+                <motion.div
+                  key={caseItem.id}
+                  className="case-card"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    if (caseItem.price <= murkocoin || caseItem.price === 0) {
+                      openCase(caseItem.id)
+                      if (caseItem.price > 0) {
+                        setMurkocoin(prev => prev - caseItem.price)
+                      }
+                    } else {
+                      window.Telegram?.WebApp?.showPopup?.({
+                        message: `😢 Не хватает муркокоин! Нужно ${caseItem.price}`,
+                        buttons: [{ text: 'ОК' }]
+                      })
+                    }
+                  }}
+                >
+                  <div className="case-emoji">{caseItem.emoji}</div>
+                  <div className="case-name">{caseItem.name}</div>
+                  <div className="case-description">{caseItem.description}</div>
+                  <div className="case-price">
+                    {caseItem.price > 0 ? `💰 ${caseItem.price}` : '🎁 Бесплатно'}
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </div>
 
         <div className="pets-grid">
-          {pets.map((pet, i) => {
-            const rarity = rarities.find(r => r.name === pet.rarity) || rarities[0]
+          {myPets.map((pet, i) => {
+            const rarity = rarityConfig[pet.rarity] || { color: '#808080', emoji: '😬' }
             
             return (
               <motion.div
@@ -488,13 +565,12 @@ function App() {
     )
   }
 
-  const currentSeason = seasons.find(s => s.name === selectedPet?.season) || seasons[0]
-  const currentRarity = rarities.find(r => r.name === selectedPet?.rarity) || rarities[0]
+  const currentRarity = rarityConfig[selectedPet?.rarity || 'обычный']
 
   return (
     <div 
       className="app-container game-container"
-      style={{ background: currentSeason.bgGradient }}
+      style={{ background: '#0a0a0a' }}
     >
       {/* Верхняя панель */}
       <motion.div
@@ -531,8 +607,8 @@ function App() {
           <h2 className="pet-name-large">{selectedPet?.name}</h2>
           
           <div className="pet-tags">
-            <span className="rarity-tag" style={{ background: currentRarity.color }}>
-              {currentRarity.emoji} {selectedPet?.rarity}
+            <span className="rarity-tag" style={{ background: currentRarity?.color }}>
+              {currentRarity?.emoji} {selectedPet?.rarity}
             </span>
             <span className="season-tag">
               {selectedPet?.season} {selectedPet?.emoji}
@@ -634,10 +710,11 @@ function App() {
         onClick={() => {
           window.Telegram?.WebApp?.showPopup?.({
             message: `Как играть:\n
+📦 Открывай кейсы и собирай питомцев
 🍔 Корми питомца мемасами, чтобы он не умер
 ⚡ Используй способность своего питомца
 🎁 Заходи каждый день за наградой
-💰 Собирай муркокоин для покупок
+💰 Зарабатывай муркокоин для новых кейсов
 🌟 Прокачивай уровень и открывай новых питомцев`,
             buttons: [{ text: 'ПОНЯЛ, ПРИНЯЛ' }]
           })
