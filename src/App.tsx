@@ -108,7 +108,7 @@ function App() {
 
     const save = () => {
       if (webApp?.cloudStorage) {
-        webApp.cloudStorage.setItem('omaygad', o maygad.toString())
+        webApp.cloudStorage.setItem('omaygad', omaygad.toString())
         webApp.cloudStorage.setItem('level', level.toString())
       }
     }
