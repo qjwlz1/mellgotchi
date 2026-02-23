@@ -25,6 +25,11 @@ function App() {
   const [specialTriggered, setSpecialTriggered] = useState(false)
   const [murkocoin, setMurkocoin] = useState(0)
   const [inventory, setInventory] = useState<string[]>([])
+  
+  // Состояния для рулетки
+  const [isSpinning, setIsSpinning] = useState(false)
+  const [spinResult, setSpinResult] = useState<Pet | null>(null)
+  const [showWheel, setShowWheel] = useState(true)
 
   const rawInitData = useRawInitData()
 
@@ -39,9 +44,8 @@ function App() {
     console.error('Ошибка парсинга initData', e)
   }
 
-  //const username = user?.username || user?.first_name || 'чел'
   const firstName = user?.first_name || ''
-  const lastName = user?.last_name || ''
+  // const lastName = user?.last_name || ''
 
   // Редкости с мемными цветами
   const rarities = [
@@ -118,51 +122,85 @@ function App() {
     }
   }
 
+  // Генерация 4х питомцев для рулетки при загрузке
   useEffect(() => {
     if (pets.length === 0) {
       const randomPets: Pet[] = []
-      for (let i = 0; i < 6; i++) {
-        let pet = generatePet()
-        randomPets.push(pet)
+      for (let i = 0; i < 4; i++) {
+        randomPets.push(generatePet())
       }
       setPets(randomPets)
     }
   }, [])
 
-  // Таймер падения с мемными сообщениями
-  useEffect(() => {
+  // Функция для рулетки
+  const spinWheel = () => {
+    if (isSpinning) return
+    
+    setIsSpinning(true)
+    setSpinResult(null)
+    
+    // Анимация прокрутки
+    const spinDuration = 2000 // 2 секунды
+    const spinInterval = 50 // обновление каждые 50мс
+    let spins = 0
+    const maxSpins = spinDuration / spinInterval
+    
     const interval = setInterval(() => {
+      // Показываем случайного питомца во время прокрутки
+      const randomIndex = Math.floor(Math.random() * pets.length)
+      setSpinResult(pets[randomIndex])
+      
+      spins++
+      if (spins >= maxSpins) {
+        clearInterval(interval)
+        // Выбираем финального питомца
+        const finalIndex = Math.floor(Math.random() * pets.length)
+        const finalPet = pets[finalIndex]
+        setSpinResult(finalPet)
+        setIsSpinning(false)
+        
+        // Автоматически выбираем питомца после окончания рулетки
+        setTimeout(() => {
+          selectPet(finalPet)
+        }, 500)
+      }
+    }, spinInterval)
+  }
+
+  useEffect(() => {
+    // Таймер падения с мемными сообщениями
+    const interval = setInterval(() => {
+      if (!selectedPet) return
+      
       setOmaygad(prev => Math.max(0, prev - 3))
       
       if (omaygad <= 30 && omaygad > 20) {
-        // @ts-ignore
         window.Telegram?.WebApp?.showPopup?.({ 
           message: `⚠️ ${selectedPet?.catchPhrase || 'ОМАЙГАД'}! Питомец хочет жрать! Покорми мемасами`, 
           buttons: [{ text: 'ЩА ПОКОРМЛЮ' }] 
         })
       } else if (omaygad <= 20 && omaygad > 0) {
-        // @ts-ignore
         window.Telegram?.WebApp?.showPopup?.({ 
           message: `😱 ${selectedPet?.name} кринжует! Срочно тащи мемы!`, 
           buttons: [{ text: 'БЕГУ' }] 
         })
       } else if (omaygad <= 0) {
-        // @ts-ignore
         window.Telegram?.WebApp?.showPopup?.({ 
           message: `💀 ${selectedPet?.name} канул в лету... Спи спокойно, бро`, 
           buttons: [{ text: 'F' }] 
         })
         setSelectedPet(null)
         setShowPetSelection(true)
+        setShowWheel(true)
       }
-    }, 30000) // Каждые 30 секунд
+    }, 30000)
 
     return () => clearInterval(interval)
   }, [omaygad, selectedPet])
 
   // Сохранение в cloudStorage
   useEffect(() => {
-    // @ts-ignore
     const webApp = window.Telegram?.WebApp
     
     const saveData = () => {
@@ -178,7 +216,6 @@ function App() {
       }
     }
 
-    // Загрузка данных
     if (webApp?.cloudStorage) {
       webApp.cloudStorage.getItem('omaygad').then(value => {
         if (value) setOmaygad(parseInt(value, 10))
@@ -199,6 +236,7 @@ function App() {
         if (value) {
           setSelectedPet(JSON.parse(value))
           setShowPetSelection(false)
+          setShowWheel(false)
         }
       })
     }
@@ -212,7 +250,6 @@ function App() {
 
   // Ежедневные награды
   useEffect(() => {
-    // @ts-ignore
     const webApp = window.Telegram?.WebApp
     if (webApp?.cloudStorage) {
       webApp.cloudStorage.getItem('lastReward').then(last => {
@@ -221,7 +258,6 @@ function App() {
           const reward = Math.floor(Math.random() * 30) + 20
           setOmaygad(prev => Math.min(100, prev + reward))
           setMurkocoin(prev => prev + 50)
-          // @ts-ignore
           window.Telegram?.WebApp?.showPopup?.({ 
             message: `🎁 Ежедневный рофл: +${reward} омайгадности и 50 муркокоин!`, 
             buttons: [{ text: 'ПОНЯЛ, ПРИНЯЛ' }] 
@@ -235,7 +271,7 @@ function App() {
   const selectPet = (pet: Pet) => {
     setSelectedPet(pet)
     setShowPetSelection(false)
-    // @ts-ignore
+    setShowWheel(false)
     window.Telegram?.WebApp?.showPopup?.({ 
       message: `🎉 Выбран ${pet.name}! ${pet.catchPhrase}!`, 
       buttons: [{ text: 'ПОГНАЛИ' }] 
@@ -243,28 +279,24 @@ function App() {
   }
 
   const feedPet = () => {
-    if (omaygad >= 100) return
+    if (!selectedPet || omaygad >= 100) return
     
     const newOmaygad = Math.min(100, omaygad + 15)
     setOmaygad(newOmaygad)
     setFeedCount(prev => prev + 1)
     
-    // Добавляем опыт
     const newXp = xp + 10
     setXp(newXp)
     
-    // Проверка на повышение уровня
     if (newXp >= level * 100) {
       setLevel(prev => prev + 1)
-      // @ts-ignore
       window.Telegram?.WebApp?.showPopup?.({ 
         message: `⬆️ УРОВЕНЬ ПОВЫШЕН! Теперь ты ${level + 1} уровня, красава!`, 
         buttons: [{ text: 'ЩИКАРНО' }] 
       })
     }
 
-    // Случайное событие
-    if (Math.random() < 0.1) { // 10% шанс
+    if (Math.random() < 0.1) {
       triggerRandomEvent()
     }
   }
@@ -282,7 +314,6 @@ function App() {
     
     const event = events[Math.floor(Math.random() * events.length)]
     event.effect()
-    // @ts-ignore
     window.Telegram?.WebApp?.showPopup?.({ message: event.msg, buttons: [{ text: 'OK' }] })
   }
 
@@ -290,48 +321,113 @@ function App() {
     if (!selectedPet || specialTriggered) return
     
     setSpecialTriggered(true)
-    setTimeout(() => setSpecialTriggered(false), 60000) // КД 1 минута
+    setTimeout(() => setSpecialTriggered(false), 60000)
 
     switch(selectedPet.season) {
       case 'общага':
         setOmaygad(prev => Math.min(100, prev + 30))
-        // @ts-ignore
         window.Telegram?.WebApp?.showPopup?.({ message: '🍪 Украл печеньку у соседа! +30 омайгадности', buttons: [{ text: 'ВКУСНО' }] })
         break
       case 'мурино':
         setMurkocoin(prev => prev + 100)
-        // @ts-ignore
         window.Telegram?.WebApp?.showPopup?.({ message: '🌫️ Растворился в тумане и нашел 100 муркокоин!', buttons: [{ text: 'МИСТИКА' }] })
         break
       case 'молочное':
         setLevel(prev => prev + 1)
-        // @ts-ignore
         window.Telegram?.WebApp?.showPopup?.({ message: '🕷️ Пауки принесли новый уровень!', buttons: [{ text: 'О_О' }] })
         break
       case 'мытищи':
         setXp(prev => prev + 50)
-        // @ts-ignore
         window.Telegram?.WebApp?.showPopup?.({ message: '💧 Водяной экстрим! +50 опыта', buttons: [{ text: 'ЭКСТРИМ' }] })
         break
     }
   }
 
-  if (showPetSelection) {
-    
+  // Если показываем рулетку
+  if (showWheel) {
     return (
-      <div style={{ 
-        background: '#0a0a0a', 
-        color: '#fff', 
-        minHeight: '100vh', 
-        padding: '20px', 
-        textAlign: 'center',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      }}>
+      <div className="app-container wheel-container">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="wheel-header"
+        >
+          <h1>🎰 КРУТИ РУЛЕТКУ!</h1>
+          <p>Привет, {firstName}! Выбери свой первый мем-питомец</p>
+        </motion.div>
+
+        <div className="wheel-content">
+          {/* Барабан рулетки */}
+          <motion.div 
+            className="wheel-drum"
+            animate={isSpinning ? {
+              rotate: [0, 360, 720, 1080, 1440],
+              scale: [1, 1.2, 1.2, 1.1, 1]
+            } : {}}
+            transition={{ duration: 2, ease: "easeOut" }}
+          >
+            <div className="wheel-display">
+              {spinResult ? (
+                <motion.div
+                  key={spinResult.name}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="wheel-result"
+                  style={{ background: rarities.find(r => r.name === spinResult.rarity)?.color + '30' }}
+                >
+                  <span className="wheel-emoji">{spinResult.emoji}</span>
+                  <div className="wheel-name">{spinResult.name}</div>
+                  <div className="wheel-rarity">{spinResult.rarity}</div>
+                </motion.div>
+              ) : (
+                <div className="wheel-placeholder">
+                  <span>❓</span>
+                  <span>ЖМИ КРУТИТЬ</span>
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Кнопка крутить */}
+          <motion.button
+            className="wheel-button"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={spinWheel}
+            disabled={isSpinning}
+          >
+            {isSpinning ? '🎲 КРУТИТСЯ...' : '🎰 КРУТИТЬ РУЛЕТКУ'}
+          </motion.button>
+
+          {/* Превью возможных питомцев */}
+          <div className="wheel-preview">
+            <h3>Возможные питомцы:</h3>
+            <div className="preview-grid">
+              {pets.map((pet, index) => (
+                <motion.div
+                  key={index}
+                  className="preview-item"
+                  whileHover={{ scale: 1.05 }}
+                  style={{ borderColor: rarities.find(r => r.name === pet.rarity)?.color }}
+                >
+                  <span className="preview-emoji">{pet.emoji}</span>
+                  <span className="preview-name">{pet.name}</span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Основной игровой экран
+  if (showPetSelection && !showWheel) {
+    return (
+      <div className="app-container selection-container">
         <motion.h1
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          style={{ fontSize: '2.5rem', marginBottom: '10px', textShadow: '0 0 10px #00ff9d' }}
         >
           🎮 МелГотчи
         </motion.h1>
@@ -340,107 +436,50 @@ function App() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          style={{ marginBottom: '30px', color: '#888' }}
         >
-          Привет, {firstName} {lastName}! Выбери своего питомца-мем
+          Привет, {firstName}! Выбери питомца (или крутани рулетку заново)
         </motion.p>
 
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '20px',
-          maxWidth: '1200px',
-          margin: '0 auto'
-        }}>
+        <motion.button
+          className="wheel-again-button"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            setShowWheel(true)
+            setSpinResult(null)
+            setIsSpinning(false)
+          }}
+        >
+          🎰 КРУТАНУТЬ РУЛЕТКУ ЕЩЕ РАЗ
+        </motion.button>
+
+        <div className="pets-grid">
           {pets.map((pet, i) => {
             const rarity = rarities.find(r => r.name === pet.rarity) || rarities[0]
-            const season = seasons.find(s => s.name === pet.season) || seasons[0]
             
             return (
               <motion.div
                 key={i}
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: i * 0.1, type: 'spring' }}
+                transition={{ delay: i * 0.1 }}
                 whileHover={{ scale: 1.05, y: -5 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => selectPet(pet)}
+                className="pet-card"
                 style={{
-                  background: season.bgGradient,
-                  borderRadius: '20px',
-                  padding: '20px',
-                  cursor: 'pointer',
-                  border: `2px solid ${rarity.color}`,
-                  boxShadow: `0 0 20px ${rarity.color}80`,
-                  position: 'relative',
-                  overflow: 'hidden'
+                  background: `linear-gradient(135deg, ${rarity.color}40, ${rarity.color}20)`,
+                  borderColor: rarity.color
                 }}
               >
-                {/* Анимированный фон */}
-                <motion.div
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    rotate: [0, 90, 0],
-                  }}
-                  transition={{ duration: 10, repeat: Infinity }}
-                  style={{
-                    position: 'absolute',
-                    top: '-50%',
-                    left: '-50%',
-                    width: '200%',
-                    height: '200%',
-                    background: `radial-gradient(circle, ${rarity.color}20 0%, transparent 70%)`,
-                    zIndex: 0
-                  }}
-                />
-                
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                  <div style={{ fontSize: '4rem', marginBottom: '10px' }}>{pet.emoji}</div>
-                  <h3 style={{ margin: '10px 0', fontSize: '1.4rem' }}>{pet.name}</h3>
-                  
-                  <div style={{ 
-                    display: 'inline-block',
-                    background: rarity.color,
-                    padding: '5px 15px',
-                    borderRadius: '20px',
-                    marginBottom: '10px',
-                    fontWeight: 'bold'
-                  }}>
-                    {rarity.emoji} {pet.rarity}
-                  </div>
-                  
-                  <p style={{ margin: '10px 0', color: '#ddd' }}>
-                    Способность: {pet.specialAbility}
-                  </p>
-                  
-                  <p style={{ 
-                    fontStyle: 'italic',
-                    color: '#ffd700',
-                    margin: '10px 0'
-                  }}>
-                    "{pet.catchPhrase}"
-                  </p>
-                  
-                  <div style={{
-                    width: '100%',
-                    height: '4px',
-                    background: '#ffffff30',
-                    borderRadius: '2px',
-                    marginTop: '15px'
-                  }}>
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(pet.rarity === 'легендарный' ? 100 : 
-                                          pet.rarity === 'шизовый' ? 70 :
-                                          pet.rarity === 'рофловый' ? 50 : 30)}%` }}
-                      style={{
-                        height: '100%',
-                        background: rarity.color,
-                        borderRadius: '2px'
-                      }}
-                    />
-                  </div>
+                <div className="pet-emoji">{pet.emoji}</div>
+                <h3 className="pet-name">{pet.name}</h3>
+                <div className="pet-rarity" style={{ background: rarity.color }}>
+                  {rarity.emoji} {pet.rarity}
                 </div>
+                <div className="pet-season">{pet.season}</div>
+                <div className="pet-ability">⚡ {pet.specialAbility}</div>
+                <div className="pet-phrase">"{pet.catchPhrase}"</div>
               </motion.div>
             )
           })}
@@ -453,49 +492,27 @@ function App() {
   const currentRarity = rarities.find(r => r.name === selectedPet?.rarity) || rarities[0]
 
   return (
-    <div style={{ 
-      background: currentSeason.bgGradient,
-      color: '#fff', 
-      minHeight: '100vh', 
-      padding: '20px', 
-      textAlign: 'center',
-      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    }}>
-      {/* Верхняя панель с ресурсами */}
+    <div 
+      className="app-container game-container"
+      style={{ background: currentSeason.bgGradient }}
+    >
+      {/* Верхняя панель */}
       <motion.div
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          padding: '15px',
-          background: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '30px',
-          marginBottom: '20px',
-          flexWrap: 'wrap',
-          gap: '10px'
-        }}
+        className="top-panel"
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span>👤 {firstName}</span>
-          <span style={{ 
-            background: '#ffd700',
-            color: '#000',
-            padding: '5px 15px',
-            borderRadius: '20px',
-            fontWeight: 'bold'
-          }}>
-            Ур. {level}
-          </span>
+        <div className="user-info">
+          <span className="user-name">👤 {firstName}</span>
+          <span className="user-level">Ур. {level}</span>
         </div>
         
-        <div style={{ display: 'flex', gap: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+        <div className="resources">
+          <div className="resource">
             <span>💰</span>
             <span>{murkocoin}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <div className="resource">
             <span>⚡</span>
             <span>{xp}/{level * 100}</span>
           </div>
@@ -507,97 +524,48 @@ function App() {
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ type: 'spring', bounce: 0.5 }}
+        className="game-content"
       >
-        <div style={{ 
-          background: 'rgba(0,0,0,0.3)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '30px',
-          padding: '30px',
-          marginBottom: '20px'
-        }}>
-          {/* Инфо о питомце */}
-          <div style={{ marginBottom: '30px' }}>
-            <div style={{ fontSize: '5rem' }}>{selectedPet?.emoji}</div>
-            <h2 style={{ fontSize: '2rem', margin: '10px 0' }}>{selectedPet?.name}</h2>
-            <div style={{ 
-              display: 'flex',
-              gap: '10px',
-              justifyContent: 'center',
-              flexWrap: 'wrap'
-            }}>
-              <span style={{
-                background: currentRarity.color,
-                padding: '5px 20px',
-                borderRadius: '20px',
-                fontWeight: 'bold'
-              }}>
-                {currentRarity.emoji} {selectedPet?.rarity}
-              </span>
-              <span style={{
-                background: '#ffffff30',
-                padding: '5px 20px',
-                borderRadius: '20px'
-              }}>
-                {selectedPet?.season} {selectedPet?.emoji}
-              </span>
-            </div>
-            <p style={{ 
-              fontSize: '1.2rem',
-              marginTop: '20px',
-              fontStyle: 'italic',
-              color: '#ffd700'
-            }}>
-              "{selectedPet?.catchPhrase}"
-            </p>
+        <div className="pet-info">
+          <div className="pet-emoji-large">{selectedPet?.emoji}</div>
+          <h2 className="pet-name-large">{selectedPet?.name}</h2>
+          
+          <div className="pet-tags">
+            <span className="rarity-tag" style={{ background: currentRarity.color }}>
+              {currentRarity.emoji} {selectedPet?.rarity}
+            </span>
+            <span className="season-tag">
+              {selectedPet?.season} {selectedPet?.emoji}
+            </span>
           </div>
+          
+          <p className="pet-catchphrase">"{selectedPet?.catchPhrase}"</p>
 
           {/* Шкала омайгадности */}
-          <div style={{ marginBottom: '30px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <div className="stat-bar">
+            <div className="stat-label">
               <span>😎 Омайгадность</span>
               <span>{omaygad}%</span>
             </div>
-            <div style={{
-              width: '100%',
-              height: '20px',
-              background: '#ffffff30',
-              borderRadius: '10px',
-              overflow: 'hidden'
-            }}>
+            <div className="bar-container">
               <motion.div
                 animate={{ width: `${omaygad}%` }}
-                style={{
-                  height: '100%',
-                  background: omaygad > 60 ? '#00ff9d' : omaygad > 30 ? '#ffd700' : '#ff4d4d',
-                  borderRadius: '10px'
+                className="bar-fill"
+                style={{ 
+                  background: omaygad > 60 ? '#00ff9d' : omaygad > 30 ? '#ffd700' : '#ff4d4d'
                 }}
               />
             </div>
           </div>
 
           {/* Кнопки действий */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: '15px',
-            marginBottom: '30px'
-          }}>
+          <div className="action-buttons">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={feedPet}
               disabled={omaygad >= 100}
-              style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                border: 'none',
-                padding: '15px',
-                borderRadius: '15px',
-                color: '#fff',
-                fontSize: '1.1rem',
-                fontWeight: 'bold',
-                cursor: omaygad >= 100 ? 'not-allowed' : 'pointer',
-                opacity: omaygad >= 100 ? 0.5 : 1
-              }}
+              className="action-button feed-button"
             >
               🍔 Покормить (+15)
             </motion.button>
@@ -607,17 +575,7 @@ function App() {
               whileTap={{ scale: 0.95 }}
               onClick={useSpecialAbility}
               disabled={specialTriggered}
-              style={{
-                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                border: 'none',
-                padding: '15px',
-                borderRadius: '15px',
-                color: '#fff',
-                fontSize: '1.1rem',
-                fontWeight: 'bold',
-                cursor: specialTriggered ? 'not-allowed' : 'pointer',
-                opacity: specialTriggered ? 0.5 : 1
-              }}
+              className="action-button ability-button"
             >
               ⚡ {selectedPet?.specialAbility} {specialTriggered ? '(КД)' : ''}
             </motion.button>
@@ -629,43 +587,23 @@ function App() {
                 setShowPetSelection(true)
                 setSelectedPet(null)
               }}
-              style={{
-                background: 'linear-gradient(135deg, #5f2c82 0%, #49a09d 100%)',
-                border: 'none',
-                padding: '15px',
-                borderRadius: '15px',
-                color: '#fff',
-                fontSize: '1.1rem',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}
+              className="action-button switch-button"
             >
-              🔄 Сменить питомца
+              🔄 Сменить
             </motion.button>
           </div>
 
           {/* Статистика */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '15px',
-            color: '#ddd'
-          }}>
-            <div style={{
-              background: 'rgba(255,255,255,0.1)',
-              padding: '15px',
-              borderRadius: '15px'
-            }}>
-              <div style={{ fontSize: '1.5rem', marginBottom: '5px' }}>🍽️</div>
-              <div>Кормёжек: {feedCount}</div>
+          <div className="stats-grid">
+            <div className="stat-item">
+              <div className="stat-icon">🍽️</div>
+              <div className="stat-value">{feedCount}</div>
+              <div className="stat-label">Кормёжек</div>
             </div>
-            <div style={{
-              background: 'rgba(255,255,255,0.1)',
-              padding: '15px',
-              borderRadius: '15px'
-            }}>
-              <div style={{ fontSize: '1.5rem', marginBottom: '5px' }}>🎯</div>
-              <div>Комбо: {Math.floor(feedCount / 10)}</div>
+            <div className="stat-item">
+              <div className="stat-icon">🎯</div>
+              <div className="stat-value">{Math.floor(feedCount / 10)}</div>
+              <div className="stat-label">Комбо</div>
             </div>
           </div>
 
@@ -674,23 +612,12 @@ function App() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              style={{
-                marginTop: '20px',
-                padding: '15px',
-                background: 'rgba(255,255,255,0.1)',
-                borderRadius: '15px'
-              }}
+              className="inventory"
             >
-              <h3 style={{ marginBottom: '10px' }}>🎒 Инвентарь</h3>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <h3>🎒 Инвентарь</h3>
+              <div className="inventory-items">
                 {inventory.map((item, i) => (
-                  <span key={i} style={{
-                    background: '#ffd700',
-                    color: '#000',
-                    padding: '5px 15px',
-                    borderRadius: '20px',
-                    fontSize: '0.9rem'
-                  }}>
+                  <span key={i} className="inventory-item">
                     {item}
                   </span>
                 ))}
@@ -705,7 +632,6 @@ function App() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => {
-          // @ts-ignore
           window.Telegram?.WebApp?.showPopup?.({
             message: `Как играть:\n
 🍔 Корми питомца мемасами, чтобы он не умер
@@ -716,16 +642,7 @@ function App() {
             buttons: [{ text: 'ПОНЯЛ, ПРИНЯЛ' }]
           })
         }}
-        style={{
-          background: 'transparent',
-          border: '2px solid #fff',
-          color: '#fff',
-          padding: '10px 30px',
-          borderRadius: '25px',
-          fontSize: '1rem',
-          cursor: 'pointer',
-          marginTop: '20px'
-        }}
+        className="help-button"
       >
         ❓ Как играть?
       </motion.button>

@@ -1,22 +1,17 @@
 :root {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.4;
   font-weight: 400;
-
   color-scheme: dark;
   color: rgba(255, 255, 255, 0.95);
   background-color: #0a0a0a;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -24,116 +19,555 @@ body {
   display: flex;
   place-items: center;
   min-width: 320px;
+  width: 100%;
   min-height: 100vh;
+  background: #0a0a0a;
   overflow-x: hidden;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+#root {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
-button {
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.8em 1.5em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
+/* Основной контейнер */
+.app-container {
+  width: 100%;
+  min-height: 100vh;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #0a0a0a;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Контейнер для рулетки */
+.wheel-container {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.wheel-header {
+  margin-bottom: 20px;
+}
+
+.wheel-header h1 {
+  font-size: clamp(1.8rem, 8vw, 2.5rem);
+  margin-bottom: 8px;
+  text-shadow: 0 0 10px #00ff9d;
+}
+
+.wheel-header p {
+  font-size: clamp(0.9rem, 4vw, 1.1rem);
+  color: #888;
+}
+
+.wheel-content {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.wheel-drum {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  cursor: pointer;
-  transition: all 0.2s ease;
+  border-radius: 20px;
+  padding: 16px;
+}
+
+.wheel-display {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.wheel-result {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.wheel-emoji {
+  font-size: clamp(4rem, 20vw, 6rem);
+}
+
+.wheel-name {
+  font-size: clamp(1.2rem, 5vw, 1.5rem);
+  font-weight: bold;
+  text-align: center;
+}
+
+.wheel-rarity {
+  font-size: clamp(0.9rem, 4vw, 1.1rem);
+  opacity: 0.8;
+}
+
+.wheel-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: #666;
+}
+
+.wheel-placeholder span:first-child {
+  font-size: 4rem;
+}
+
+.wheel-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  padding: 16px 24px;
+  border-radius: 50px;
   color: white;
+  font-size: clamp(1rem, 5vw, 1.2rem);
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
 }
 
-button:hover {
-  border-color: #646cff;
-  background: rgba(255, 255, 255, 0.1);
+.wheel-preview {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 16px;
 }
 
-button:focus,
-button:focus-visible {
-  outline: 2px solid #646cff;
-  outline-offset: 2px;
+.wheel-preview h3 {
+  font-size: clamp(1rem, 4vw, 1.2rem);
+  margin-bottom: 12px;
+  color: #888;
 }
 
-button:disabled {
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.preview-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px solid;
+  border-radius: 12px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.preview-emoji {
+  font-size: 2rem;
+}
+
+.preview-name {
+  font-size: 0.8rem;
+  text-align: center;
+  word-break: break-word;
+}
+
+/* Контейнер выбора питомца */
+.selection-container {
+  align-items: center;
+  padding: 16px;
+}
+
+.selection-container h1 {
+  font-size: clamp(2rem, 8vw, 2.5rem);
+  margin-bottom: 8px;
+}
+
+.wheel-again-button {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  border: none;
+  padding: 12px 24px;
+  border-radius: 50px;
+  color: white;
+  font-size: clamp(0.9rem, 4vw, 1rem);
+  font-weight: bold;
+  cursor: pointer;
+  margin: 16px 0;
+  width: 100%;
+  max-width: 300px;
+}
+
+.pets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.pet-card {
+  border-radius: 20px;
+  padding: 20px;
+  cursor: pointer;
+  border: 2px solid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.pet-emoji {
+  font-size: 3rem;
+}
+
+.pet-name {
+  font-size: clamp(1.1rem, 4vw, 1.3rem);
+  text-align: center;
+  margin: 4px 0;
+}
+
+.pet-rarity {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.pet-season {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.pet-ability {
+  font-size: 0.9rem;
+  color: #ddd;
+  margin-top: 4px;
+}
+
+.pet-phrase {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #ffd700;
+}
+
+/* Игровой контейнер */
+.game-container {
+  background-size: cover;
+  background-position: center;
+  justify-content: space-between;
+}
+
+.top-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  border-radius: 30px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-name {
+  font-size: clamp(0.9rem, 4vw, 1rem);
+}
+
+.user-level {
+  background: #ffd700;
+  color: #000;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.resources {
+  display: flex;
+  gap: 16px;
+}
+
+.resource {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: clamp(0.9rem, 4vw, 1rem);
+}
+
+.game-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 500px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.pet-info {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border-radius: 30px;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pet-emoji-large {
+  font-size: clamp(4rem, 20vw, 6rem);
+  text-align: center;
+}
+
+.pet-name-large {
+  font-size: clamp(1.5rem, 6vw, 2rem);
+  text-align: center;
+  margin: 8px 0;
+  word-break: break-word;
+}
+
+.pet-tags {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.rarity-tag, .season-tag {
+  padding: 6px 16px;
+  border-radius: 30px;
+  font-size: clamp(0.8rem, 3.5vw, 0.9rem);
+  font-weight: bold;
+}
+
+.season-tag {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.pet-catchphrase {
+  font-size: clamp(1rem, 4vw, 1.2rem);
+  font-style: italic;
+  color: #ffd700;
+  text-align: center;
+  padding: 0 8px;
+}
+
+/* Шкалы */
+.stat-bar {
+  width: 100%;
+}
+
+.stat-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: clamp(0.9rem, 4vw, 1rem);
+}
+
+.bar-container {
+  width: 100%;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* Кнопки действий */
+.action-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.action-button {
+  border: none;
+  padding: 14px 8px;
+  border-radius: 16px;
+  color: white;
+  font-size: clamp(0.9rem, 3.5vw, 1rem);
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.feed-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.ability-button {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.switch-button {
+  background: linear-gradient(135deg, #5f2c82 0%, #49a09d 100%);
+}
+
+.action-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* Кастомный скроллбар */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* Статистика */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 8px;
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
+.stat-item {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 12px 8px;
+  border-radius: 16px;
+  text-align: center;
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
+.stat-icon {
+  font-size: 1.8rem;
+  margin-bottom: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+.stat-value {
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+/* Инвентарь */
+.inventory {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.inventory h3 {
+  font-size: 1rem;
+  margin-bottom: 8px;
+  color: #ffd700;
+}
+
+.inventory-items {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.inventory-item {
+  background: #ffd700;
+  color: #000;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+/* Кнопка помощи */
+.help-button {
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 10px 24px;
+  border-radius: 30px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin: 8px auto 0;
+  width: fit-content;
+}
+
+/* Адаптация для очень маленьких экранов */
+@media (max-width: 360px) {
+  .action-buttons {
+    grid-template-columns: 1fr;
+  }
+  
+  .pet-tags {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .resources {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+/* Адаптация для планшетов */
+@media (min-width: 768px) {
+  .app-container {
+    padding: 20px;
+  }
+  
+  .game-content {
+    max-width: 600px;
+  }
+  
+  .pets-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* Анимации */
 @keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 
 @keyframes float {
-  0% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-  100% {
-    transform: translateY(0px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Убираем выделение при тапе на мобильных */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-/* Медиа-запросы для мобилок */
-@media (max-width: 768px) {
-  h1 {
-    font-size: 2.5em;
-  }
-  
-  button {
-    padding: 0.6em 1.2em;
-  }
-}
-
-@media (max-width: 480px) {
-  h1 {
-    font-size: 2em;
-  }
-  
-  .container {
-    padding: 10px;
-  }
+input, textarea {
+  -webkit-user-select: auto;
+  user-select: auto;
 }
