@@ -154,6 +154,50 @@ function ToastContainer({ toasts, removeToast }: ToastContainerProps) {
   );
 }
 
+// ==================== КОМПОНЕНТ УВЕДОМЛЕНИЯ О ВЫПАДЕНИИ ====================
+
+interface DropNotificationProps {
+  pet: Pet | null;
+  onClose: () => void;
+}
+
+function DropNotification({ pet, onClose }: DropNotificationProps) {
+  useEffect(() => {
+    if (!pet) return;
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [pet, onClose]);
+
+  if (!pet) return null;
+
+  const rarity = RARITY_CONFIG[pet.rarity];
+
+  return (
+    <motion.div
+      className="drop-notification-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div
+        className="drop-notification"
+        initial={{ scale: 0.5, y: 50 }}
+        animate={{ scale: 1, y: 0 }}
+        transition={{ type: 'spring', bounce: 0.4 }}
+      >
+        <div className="drop-emoji">{pet.emoji}</div>
+        <div className="drop-name">{pet.name}</div>
+        <div className="drop-rarity" style={{ background: rarity.color }}>
+          {rarity.emoji} {rarity.name}
+        </div>
+        <div className="drop-phrase">"{pet.catchPhrase}"</div>
+        <div className="drop-close">Нажмите, чтобы закрыть</div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ==================== КОМПОНЕНТ НАВБАРА ====================
 
 interface NavbarProps {
@@ -197,9 +241,10 @@ function Navbar({ currentSection, onSectionChange }: NavbarProps) {
 interface WheelScreenProps {
   onComplete: (pet: Pet) => void;
   starterCaseOpened: boolean;
+  showDropNotification: (pet: Pet) => void;
 }
 
-function WheelScreen({ onComplete, starterCaseOpened }: WheelScreenProps) {
+function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: WheelScreenProps) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinResult, setSpinResult] = useState<Pet | null>(null);
   const intervalRef = useRef<number | undefined>(undefined);
@@ -233,11 +278,12 @@ function WheelScreen({ onComplete, starterCaseOpened }: WheelScreenProps) {
         if (newPet) {
           setSpinResult(newPet);
           onComplete(newPet);
+          showDropNotification(newPet);
         }
         setIsSpinning(false);
       }
     }, spinInterval);
-  }, [isSpinning, starterCaseOpened, onComplete]);
+  }, [isSpinning, starterCaseOpened, onComplete, showDropNotification]);
 
   useEffect(() => {
     return () => {
@@ -632,6 +678,7 @@ function App() {
   const [specialCooldown, setSpecialCooldown] = useState(false);
   const [currentSection, setCurrentSection] = useState<'pet' | 'collection' | 'collider' | 'shop'>('pet');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [droppedPet, setDroppedPet] = useState<Pet | null>(null);
   const nextToastId = useRef(0);
 
   const addToast = useCallback((text: string) => {
@@ -644,6 +691,10 @@ function App() {
 
   const removeToast = useCallback((id: number) => {
     setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  const showDropNotification = useCallback((pet: Pet) => {
+    setDroppedPet(pet);
   }, []);
 
   const addPetToCollection = useCallback((pet: Pet) => {
@@ -699,15 +750,15 @@ function App() {
       if (!newPet) return;
 
       addPetToCollection(newPet);
+      showDropNotification(newPet);
 
       if (caseId === 'starter') {
         setStarterCaseOpened(true);
       }
 
-      addToast(`🎉 Вы получили: ${newPet.name} (${RARITY_CONFIG[newPet.rarity].name})! ${newPet.catchPhrase}`);
       return newPet;
     },
-    [starterCaseOpened, addPetToCollection, addToast]
+    [starterCaseOpened, addPetToCollection, addToast, showDropNotification]
   );
 
   const feedPet = useCallback(() => {
@@ -789,7 +840,6 @@ function App() {
         return prev;
       }
 
-      // Уменьшаем count на 1, повышаем level на 1
       const updated = prev.map(p => {
         if (p.id === petId) {
           return { ...p, count: p.count - 1, level: p.level + 1 };
@@ -797,7 +847,6 @@ function App() {
         return p;
       });
 
-      // Если это текущий питомец, обновляем selectedPet
       if (selectedPet && selectedPet.id === petId) {
         const updatedPet = updated.find(p => p.id === petId);
         if (updatedPet) {
@@ -907,7 +956,7 @@ function App() {
   }, []);
 
   if (!selectedPet && !starterCaseOpened) {
-    return <WheelScreen onComplete={handleWheelComplete} starterCaseOpened={starterCaseOpened} />;
+    return <WheelScreen onComplete={handleWheelComplete} starterCaseOpened={starterCaseOpened} showDropNotification={showDropNotification} />;
   }
 
   if (!selectedPet && starterCaseOpened) {
@@ -962,6 +1011,9 @@ function App() {
         <ShopScreen onOpenCase={openCase} starterCaseOpened={starterCaseOpened} addToast={addToast} />
       )}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <AnimatePresence>
+        {droppedPet && <DropNotification pet={droppedPet} onClose={() => setDroppedPet(null)} />}
+      </AnimatePresence>
     </div>
   );
 }
