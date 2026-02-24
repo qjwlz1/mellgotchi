@@ -19,6 +19,7 @@ interface Pet {
 
 interface OwnedPet extends Pet {
   count: number;
+  level: number;          // уровень питомца (вида)
 }
 
 interface Case {
@@ -119,6 +120,44 @@ const getRandomPetId = (pool: Pet[]): number => {
 };
 
 const getPetById = (id: number): Pet | undefined => PETS_DATABASE.find(p => p.id === id);
+
+// ==================== КОМПОНЕНТ НАВБАРА ====================
+
+interface NavbarProps {
+  currentSection: 'pet' | 'collection' | 'collider' | 'shop';
+  onSectionChange: (section: 'pet' | 'collection' | 'collider' | 'shop') => void;
+}
+
+function Navbar({ currentSection, onSectionChange }: NavbarProps) {
+  return (
+    <div className="navbar">
+      <button
+        className={`nav-button ${currentSection === 'pet' ? 'active' : ''}`}
+        onClick={() => onSectionChange('pet')}
+      >
+        🐾 Питомец
+      </button>
+      <button
+        className={`nav-button ${currentSection === 'collection' ? 'active' : ''}`}
+        onClick={() => onSectionChange('collection')}
+      >
+        📚 Коллекция
+      </button>
+      <button
+        className={`nav-button ${currentSection === 'collider' ? 'active' : ''}`}
+        onClick={() => onSectionChange('collider')}
+      >
+        ⚡ Коллайдер
+      </button>
+      <button
+        className={`nav-button ${currentSection === 'shop' ? 'active' : ''}`}
+        onClick={() => onSectionChange('shop')}
+      >
+        🛒 Магазин
+      </button>
+    </div>
+  );
+}
 
 // ==================== КОМПОНЕНТ РУЛЕТКИ ====================
 
@@ -241,193 +280,12 @@ function WheelScreen({ onComplete, starterCaseOpened }: WheelScreenProps) {
   );
 }
 
-// ==================== КОМПОНЕНТ ВЫБОРА ПИТОМЦА ====================
-
-interface SelectionScreenProps {
-  myPets: OwnedPet[];
-  onSelectPet: (pet: OwnedPet) => void;
-  onOpenCase: (caseId: string) => void;
-  onCombine: (selectedIds: number[]) => void;
-  murkocoin: number;
-  starterCaseOpened: boolean;
-  showPopup: (message: string) => void;
-}
-
-function SelectionScreen({
-  myPets,
-  onSelectPet,
-  onOpenCase,
-  onCombine,
-  murkocoin,
-  starterCaseOpened,
-  showPopup,
-}: SelectionScreenProps) {
-  const [activeTab, setActiveTab] = useState<'pets' | 'collider'>('pets');
-  const [selectedForCollider, setSelectedForCollider] = useState<number[]>([]);
-
-  const handleCombine = () => {
-    if (selectedForCollider.length < 2) {
-      showPopup('😢 Нужно выбрать минимум 2 питомца для коллайдера!');
-      return;
-    }
-    onCombine(selectedForCollider);
-    setSelectedForCollider([]);
-  };
-
-  return (
-    <div className="app-container selection-container">
-      <motion.h1 initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-        🎮 МелГотчи
-      </motion.h1>
-
-      <div className="tabs">
-        <motion.button
-          className={`tab ${activeTab === 'pets' ? 'active' : ''}`}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setActiveTab('pets')}
-        >
-          🐾 Мои питомцы ({myPets.length})
-        </motion.button>
-        <motion.button
-          className={`tab ${activeTab === 'collider' ? 'active' : ''}`}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setActiveTab('collider')}
-        >
-          ⚡ Коллайдер
-        </motion.button>
-      </div>
-
-      {activeTab === 'pets' ? (
-        <>
-          <div className="case-shop">
-            <h3>📦 Магазин кейсов</h3>
-            <div className="cases-grid">
-              {CASES.map(c => {
-                const isStarterOpened = c.id === 'starter' && starterCaseOpened;
-                const hasMoney = c.price <= murkocoin;
-                const disabled = !c.available || isStarterOpened || (c.price > 0 && !hasMoney);
-
-                return (
-                  <motion.div
-                    key={c.id}
-                    className={`case-card ${disabled ? 'disabled' : ''}`}
-                    whileHover={!disabled ? { scale: 1.05 } : {}}
-                    whileTap={!disabled ? { scale: 0.95 } : {}}
-                    onClick={() => !disabled && onOpenCase(c.id)}
-                  >
-                    <div className="case-emoji">{c.emoji}</div>
-                    <div className="case-info">
-                      <div className="case-name">{c.name}</div>
-                      <div className="case-description">{c.description}</div>
-                      <div className="case-price">
-                        {c.price > 0 ? `💰 ${c.price}` : '🎁 Бесплатно'}
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="pets-grid">
-            {myPets.map((pet, i) => {
-              const rarity = RARITY_CONFIG[pet.rarity];
-              return (
-                <motion.div
-                  key={pet.id}
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  whileHover={{ scale: 1.05, y: -5 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => onSelectPet(pet)}
-                  className="pet-card"
-                  style={{
-                    background: `linear-gradient(135deg, ${rarity.color}40, ${rarity.color}20)`,
-                    borderColor: rarity.color,
-                  }}
-                >
-                  <div className="pet-emoji">{pet.emoji}</div>
-                  <h3 className="pet-name">{pet.name}</h3>
-                  <div className="pet-rarity" style={{ background: rarity.color }}>
-                    {rarity.emoji} {rarity.name}
-                  </div>
-                  {pet.count > 1 && <div className="pet-count">×{pet.count}</div>}
-                </motion.div>
-              );
-            })}
-          </div>
-        </>
-      ) : (
-        <div className="collider-container">
-          <h3>⚡ Коллайдер питомцев</h3>
-          <p className="collider-description">
-            Объедини 2+ дубликата, чтобы получить питомца более высокой редкости!
-          </p>
-
-          <div className="selected-for-collider">
-            <h4>Выбрано для коллайдера: {selectedForCollider.length}</h4>
-            {selectedForCollider.length > 0 && (
-              <motion.button
-                className="combine-button"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleCombine}
-              >
-                ⚡ ОБЪЕДИНИТЬ
-              </motion.button>
-            )}
-          </div>
-
-          <div className="pets-grid collider-grid">
-            {myPets
-              .filter(p => p.count > 1)
-              .map(pet => {
-                const rarity = RARITY_CONFIG[pet.rarity];
-                const isSelected = selectedForCollider.includes(pet.id);
-                return (
-                  <motion.div
-                    key={pet.id}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => {
-                      if (isSelected) {
-                        setSelectedForCollider(prev => prev.filter(id => id !== pet.id));
-                      } else {
-                        setSelectedForCollider(prev => [...prev, pet.id]);
-                      }
-                    }}
-                    className={`pet-card collider-card ${isSelected ? 'selected' : ''}`}
-                    style={{
-                      background: `linear-gradient(135deg, ${rarity.color}40, ${rarity.color}20)`,
-                      borderColor: isSelected ? '#ffd700' : rarity.color,
-                    }}
-                  >
-                    <div className="pet-emoji">{pet.emoji}</div>
-                    <h3 className="pet-name">{pet.name}</h3>
-                    <div className="pet-rarity" style={{ background: rarity.color }}>
-                      {rarity.emoji} {rarity.name}
-                    </div>
-                    <div className="pet-count">×{pet.count}</div>
-                    {isSelected && <div className="selected-mark">✓</div>}
-                  </motion.div>
-                );
-              })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ==================== КОМПОНЕНТ ИГРОВОГО ЭКРАНА ====================
+// ==================== КОМПОНЕНТ ЭКРАНА ПИТОМЦА ====================
 
 interface GameScreenProps {
   pet: OwnedPet;
   omaygad: number;
-  level: number;
+  level: number;           // уровень игрока (глобальный)
   xp: number;
   murkocoin: number;
   feedCount: number;
@@ -435,7 +293,6 @@ interface GameScreenProps {
   specialCooldown: boolean;
   onFeed: () => void;
   onUseAbility: () => void;
-  onSwitch: () => void;
   onShowHelp: () => void;
 }
 
@@ -450,13 +307,12 @@ function GameScreen({
   specialCooldown,
   onFeed,
   onUseAbility,
-  onSwitch,
   onShowHelp,
 }: GameScreenProps) {
   const rarity = RARITY_CONFIG[pet.rarity];
 
   return (
-    <div className="app-container game-container" style={{ background: '#0a0a0a' }}>
+    <div className="game-screen">
       <motion.div initial={{ y: -100 }} animate={{ y: 0 }} className="top-panel">
         <div className="user-info">
           <span className="user-level">Ур. {level}</span>
@@ -476,6 +332,7 @@ function GameScreen({
         <div className="pet-info">
           <div className="pet-emoji-large">{pet.emoji}</div>
           <h2 className="pet-name-large">{pet.name}</h2>
+          <div className="pet-level">Уровень питомца: {pet.level}</div>
 
           <div className="pet-tags">
             <span className="rarity-tag" style={{ background: rarity.color }}>
@@ -524,14 +381,6 @@ function GameScreen({
             >
               ⚡ {pet.specialAbility} {specialCooldown ? '(КД)' : ''}
             </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onSwitch}
-              className="action-button switch-button"
-            >
-              🔄 Сменить
-            </motion.button>
           </div>
 
           <div className="stats-grid">
@@ -578,6 +427,158 @@ function GameScreen({
   );
 }
 
+// ==================== КОМПОНЕНТ КОЛЛЕКЦИИ ====================
+
+interface CollectionScreenProps {
+  myPets: OwnedPet[];
+  onSelectPet: (pet: OwnedPet) => void;
+}
+
+function CollectionScreen({ myPets, onSelectPet }: CollectionScreenProps) {
+  return (
+    <div className="collection-screen">
+      <h2>📚 Моя коллекция</h2>
+      <div className="pets-grid">
+        {myPets.map((pet, i) => {
+          const rarity = RARITY_CONFIG[pet.rarity];
+          return (
+            <motion.div
+              key={pet.id}
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ delay: i * 0.1 }}
+              whileHover={{ scale: 1.05, y: -5 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onSelectPet(pet)}
+              className="pet-card"
+              style={{
+                background: `linear-gradient(135deg, ${rarity.color}40, ${rarity.color}20)`,
+                borderColor: rarity.color,
+              }}
+            >
+              <div className="pet-emoji">{pet.emoji}</div>
+              <h3 className="pet-name">{pet.name}</h3>
+              <div className="pet-rarity" style={{ background: rarity.color }}>
+                {rarity.emoji} {rarity.name}
+              </div>
+              <div className="pet-level-badge">Ур. {pet.level}</div>
+              {pet.count > 1 && <div className="pet-count">×{pet.count}</div>}
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ==================== КОМПОНЕНТ КОЛЛАЙДЕРА ====================
+
+interface ColliderScreenProps {
+  myPets: OwnedPet[];
+  onLevelUp: (petId: number) => void;
+  showPopup: (msg: string) => void;
+}
+
+function ColliderScreen({ myPets, onLevelUp, showPopup }: ColliderScreenProps) {
+  // Показываем только тех, у кого count >= 2 (есть дубликаты)
+  const upgradablePets = myPets.filter(p => p.count >= 2);
+
+  return (
+    <div className="collider-screen">
+      <h2>⚡ Коллайдер питомцев</h2>
+      <p className="collider-description">
+        Объединяй 2 дубликата одного питомца, чтобы повысить его уровень!
+      </p>
+
+      {upgradablePets.length === 0 ? (
+        <p className="no-pets">😢 У вас пока нет питомцев с дубликатами</p>
+      ) : (
+        <div className="pets-grid collider-grid">
+          {upgradablePets.map(pet => {
+            const rarity = RARITY_CONFIG[pet.rarity];
+            return (
+              <motion.div
+                key={pet.id}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="pet-card collider-card"
+                style={{
+                  background: `linear-gradient(135deg, ${rarity.color}40, ${rarity.color}20)`,
+                  borderColor: rarity.color,
+                }}
+              >
+                <div className="pet-emoji">{pet.emoji}</div>
+                <h3 className="pet-name">{pet.name}</h3>
+                <div className="pet-rarity" style={{ background: rarity.color }}>
+                  {rarity.emoji} {rarity.name}
+                </div>
+                <div className="pet-level">Ур. {pet.level}</div>
+                <div className="pet-count">×{pet.count}</div>
+                <motion.button
+                  className="level-up-button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    if (pet.count >= 2) {
+                      onLevelUp(pet.id);
+                    } else {
+                      showPopup('😢 Недостаточно дубликатов');
+                    }
+                  }}
+                >
+                  ⬆️ Повысить уровень (2 шт.)
+                </motion.button>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== КОМПОНЕНТ МАГАЗИНА ====================
+
+interface ShopScreenProps {
+  onOpenCase: (caseId: string) => void;
+  murkocoin: number;
+  starterCaseOpened: boolean;
+}
+
+function ShopScreen({ onOpenCase, murkocoin, starterCaseOpened }: ShopScreenProps) {
+  return (
+    <div className="shop-screen">
+      <h2>🛒 Магазин кейсов</h2>
+      <div className="cases-grid">
+        {CASES.map(c => {
+          const isStarterOpened = c.id === 'starter' && starterCaseOpened;
+          const hasMoney = c.price <= murkocoin;
+          const disabled = !c.available || isStarterOpened || (c.price > 0 && !hasMoney);
+
+          return (
+            <motion.div
+              key={c.id}
+              className={`case-card ${disabled ? 'disabled' : ''}`}
+              whileHover={!disabled ? { scale: 1.05 } : {}}
+              whileTap={!disabled ? { scale: 0.95 } : {}}
+              onClick={() => !disabled && onOpenCase(c.id)}
+            >
+              <div className="case-emoji">{c.emoji}</div>
+              <div className="case-info">
+                <div className="case-name">{c.name}</div>
+                <div className="case-description">{c.description}</div>
+                <div className="case-price">
+                  {c.price > 0 ? `💰 ${c.price}` : '🎁 Бесплатно'}
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ==================== ОСНОВНОЙ КОМПОНЕНТ ====================
 
 function App() {
@@ -589,9 +590,9 @@ function App() {
   const [inventory, setInventory] = useState<string[]>([]);
   const [myPets, setMyPets] = useState<OwnedPet[]>([]);
   const [selectedPet, setSelectedPet] = useState<OwnedPet | null>(null);
-  const [showPetSelection, setShowPetSelection] = useState(true);
   const [starterCaseOpened, setStarterCaseOpened] = useState(false);
   const [specialCooldown, setSpecialCooldown] = useState(false);
+  const [currentSection, setCurrentSection] = useState<'pet' | 'collection' | 'collider' | 'shop'>('pet');
 
   // ===== Вспомогательные функции =====
 
@@ -599,26 +600,11 @@ function App() {
     setMyPets(prev => {
       const existing = prev.find(p => p.id === pet.id);
       if (existing) {
+        // уже есть такой вид – увеличиваем счётчик, уровень не меняем
         return prev.map(p => (p.id === pet.id ? { ...p, count: p.count + 1 } : p));
       }
-      return [...prev, { ...pet, count: 1 }];
-    });
-  }, []);
-
-  const removePetsFromCollection = useCallback((petIds: number[]) => {
-    setMyPets(prev => {
-      const countMap = new Map<number, number>();
-      petIds.forEach(id => countMap.set(id, (countMap.get(id) || 0) + 1));
-
-      return prev
-        .map(pet => {
-          const removeCount = countMap.get(pet.id) || 0;
-          if (removeCount === 0) return pet;
-          const newCount = pet.count - removeCount;
-          if (newCount <= 0) return null;
-          return { ...pet, count: newCount };
-        })
-        .filter((p): p is OwnedPet => p !== null);
+      // новый вид – добавляем с уровнем 1
+      return [...prev, { ...pet, count: 1, level: 1 }];
     });
   }, []);
 
@@ -764,48 +750,39 @@ function App() {
     }
   }, [selectedPet, specialCooldown, showPopup]);
 
-  const combineInCollider = useCallback(
-    (selectedIds: number[]) => {
-      if (selectedIds.length < 2) {
-        showPopup('😢 Нужно выбрать минимум 2 питомца для коллайдера!');
-        return;
+  // Повышение уровня питомца в коллайдере
+  const levelUpPet = useCallback((petId: number) => {
+    setMyPets(prev => {
+      const pet = prev.find(p => p.id === petId);
+      if (!pet || pet.count < 2) {
+        showPopup('😢 Недостаточно дубликатов для повышения уровня');
+        return prev;
       }
 
-      const selectedPetsData = selectedIds
-        .map(id => myPets.find(p => p.id === id))
-        .filter((p): p is OwnedPet => p !== undefined);
+      // Уменьшаем count на 2, повышаем level на 1
+      const updated = prev.map(p => {
+        if (p.id === petId) {
+          return { ...p, count: p.count - 2, level: p.level + 1 };
+        }
+        return p;
+      }).filter(p => p.count > 0); // удаляем, если count стал 0
 
-      const idCount = new Map<number, number>();
-      selectedIds.forEach(id => idCount.set(id, (idCount.get(id) || 0) + 1));
-
-      for (const [id, count] of idCount.entries()) {
-        const pet = myPets.find(p => p.id === id);
-        if (!pet || pet.count < count) {
-          showPopup(`😢 У тебя только ${pet?.count || 0} ${pet?.name}, а выбрано ${count}!`);
-          return;
+      // Если это текущий питомец, обновляем selectedPet
+      if (selectedPet && selectedPet.id === petId) {
+        const updatedPet = updated.find(p => p.id === petId);
+        if (updatedPet) {
+          setSelectedPet(updatedPet);
+        } else {
+          // Если питомец удалён (count стал 0), сбрасываем выбор
+          setSelectedPet(null);
+          setCurrentSection('collection'); // перекидываем в коллекцию
         }
       }
 
-      const rarities = selectedPetsData.map(p => p.rarity);
-      const rarityOrder: RarityKey[] = ['обычный', 'редкий', 'эпический', 'легендарный', 'мифический', 'божественный'];
-      const maxRarityIndex = Math.max(...rarities.map(r => rarityOrder.indexOf(r)));
-      const resultRarityIndex = Math.min(maxRarityIndex + 1, rarityOrder.length - 1);
-      const resultRarity = rarityOrder[resultRarityIndex];
-
-      const possibleResults = PETS_DATABASE.filter(p => p.rarity === resultRarity);
-      if (possibleResults.length === 0) {
-        showPopup('😢 Не удалось найти питомца для коллайдера');
-        return;
-      }
-
-      const result = possibleResults[Math.floor(Math.random() * possibleResults.length)];
-      removePetsFromCollection(selectedIds);
-      addPetToCollection(result);
-
-      showPopup(`⚡ Коллайдер сработал! Получен: ${result.name} (${RARITY_CONFIG[result.rarity].name})!`);
-    },
-    [myPets, removePetsFromCollection, addPetToCollection, showPopup]
-  );
+      showPopup(`⬆️ Уровень питомца ${pet.name} повышен до ${pet.level + 1}!`);
+      return updated;
+    });
+  }, [selectedPet, showPopup]);
 
   // ===== Эффекты =====
 
@@ -822,7 +799,7 @@ function App() {
         } else if (newVal <= 0) {
           showPopup(`💀 ${selectedPet.name} канул в лету... Спи спокойно, бро`);
           setSelectedPet(null);
-          setShowPetSelection(true);
+          setCurrentSection('collection');
           return 0;
         }
         return newVal;
@@ -847,7 +824,9 @@ function App() {
         setInventory(data.inventory ?? []);
         if (data.selectedPet) {
           setSelectedPet(data.selectedPet);
-          setShowPetSelection(false);
+        }
+        if (data.currentSection) {
+          setCurrentSection(data.currentSection);
         }
       }
     } catch (e) {
@@ -866,9 +845,10 @@ function App() {
       starterCaseOpened,
       selectedPet,
       inventory,
+      currentSection,
     };
     localStorage.setItem('melgotchi-save', JSON.stringify(data));
-  }, [omaygad, level, xp, murkocoin, feedCount, myPets, starterCaseOpened, selectedPet, inventory]);
+  }, [omaygad, level, xp, murkocoin, feedCount, myPets, starterCaseOpened, selectedPet, inventory, currentSection]);
 
   useEffect(() => {
     const lastReward = localStorage.getItem('lastRewardDate');
@@ -887,9 +867,11 @@ function App() {
     (newPet: Pet) => {
       addPetToCollection(newPet);
       setStarterCaseOpened(true);
-      setShowPetSelection(false);
-      setSelectedPet({ ...newPet, count: 1 });
+      // После рулетки автоматически выбираем полученного питомца и переходим на главную
+      const owned = { ...newPet, count: 1, level: 1 };
+      setSelectedPet(owned);
       setOmaygad(100);
+      setCurrentSection('pet');
     },
     [addPetToCollection]
   );
@@ -897,57 +879,72 @@ function App() {
   const handleSelectPet = useCallback((pet: OwnedPet) => {
     setSelectedPet(pet);
     setOmaygad(pet.happiness);
-    setShowPetSelection(false);
+    setCurrentSection('pet');
   }, []);
 
-  const handleSwitchFromGame = useCallback(() => {
-    setSelectedPet(null);
-    setShowPetSelection(true);
-  }, []);
-
-  if (showPetSelection && !starterCaseOpened) {
+  // Если нет выбранного питомца и стартовый кейс ещё не открыт, показываем рулетку
+  if (!selectedPet && !starterCaseOpened) {
     return <WheelScreen onComplete={handleWheelComplete} starterCaseOpened={starterCaseOpened} />;
   }
 
-  if (showPetSelection) {
-    return (
-      <SelectionScreen
-        myPets={myPets}
-        onSelectPet={handleSelectPet}
-        onOpenCase={openCase}
-        onCombine={combineInCollider}
-        murkocoin={murkocoin}
-        starterCaseOpened={starterCaseOpened}
-        showPopup={showPopup}
-      />
-    );
+  // Если нет выбранного питомца, но стартовый кейс открыт – возможно, все питомцы умерли или удалены
+  // тогда отправляем в коллекцию выбрать нового
+  if (!selectedPet && starterCaseOpened) {
+    // Если есть хоть один питомец, выбираем первого
+    if (myPets.length > 0) {
+      const firstPet = myPets[0];
+      setSelectedPet(firstPet);
+      setOmaygad(firstPet.happiness);
+      setCurrentSection('pet');
+    } else {
+      // Если питомцев вообще нет – возвращаем к рулетке? Но starterCaseOpened true, значит был, но все умерли.
+      // Можно сбросить starterCaseOpened или предложить купить кейс. Пока просто покажем коллекцию пустую.
+      return (
+        <div className="app-container">
+          <Navbar currentSection={currentSection} onSectionChange={setCurrentSection} />
+          <CollectionScreen myPets={myPets} onSelectPet={handleSelectPet} />
+        </div>
+      );
+    }
   }
 
-  if (!selectedPet) return null;
-
+  // Основной рендер с навбаром
   return (
-    <GameScreen
-      pet={selectedPet}
-      omaygad={omaygad}
-      level={level}
-      xp={xp}
-      murkocoin={murkocoin}
-      feedCount={feedCount}
-      inventory={inventory}
-      specialCooldown={specialCooldown}
-      onFeed={feedPet}
-      onUseAbility={useSpecialAbility}
-      onSwitch={handleSwitchFromGame}
-      onShowHelp={() =>
-        showPopup(`Как играть:
+    <div className="app-container">
+      <Navbar currentSection={currentSection} onSectionChange={setCurrentSection} />
+      {currentSection === 'pet' && selectedPet && (
+        <GameScreen
+          pet={selectedPet}
+          omaygad={omaygad}
+          level={level}
+          xp={xp}
+          murkocoin={murkocoin}
+          feedCount={feedCount}
+          inventory={inventory}
+          specialCooldown={specialCooldown}
+          onFeed={feedPet}
+          onUseAbility={useSpecialAbility}
+          onShowHelp={() =>
+            showPopup(`Как играть:
 📦 Открывай кейсы и собирай питомцев
 🍔 Корми питомца мемасами, чтобы он не умер
 ⚡ Используй способность своего питомца
 🎁 Заходи каждый день за наградой
 💰 Зарабатывай муркокоин для новых кейсов
-⚡ Объединяй дубликаты в коллайдере`)
-      }
-    />
+⚡ Объединяй дубликаты в коллайдере, чтобы повышать уровень питомца`)
+          }
+        />
+      )}
+      {currentSection === 'collection' && (
+        <CollectionScreen myPets={myPets} onSelectPet={handleSelectPet} />
+      )}
+      {currentSection === 'collider' && (
+        <ColliderScreen myPets={myPets} onLevelUp={levelUpPet} showPopup={showPopup} />
+      )}
+      {currentSection === 'shop' && (
+        <ShopScreen onOpenCase={openCase} murkocoin={murkocoin} starterCaseOpened={starterCaseOpened} />
+      )}
+    </div>
   );
 }
 
