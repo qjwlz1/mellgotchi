@@ -12,6 +12,15 @@
   padding: 0;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea {
+  -webkit-user-select: auto;
+  user-select: auto;
 }
 
 body {
@@ -197,20 +206,6 @@ body {
   margin-bottom: 8px;
 }
 
-.wheel-again-button {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  border: none;
-  padding: 12px 24px;
-  border-radius: 50px;
-  color: white;
-  font-size: clamp(0.9rem, 4vw, 1rem);
-  font-weight: bold;
-  cursor: pointer;
-  margin: 16px 0;
-  width: 100%;
-  max-width: 300px;
-}
-
 .pets-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -230,6 +225,7 @@ body {
   align-items: center;
   gap: 8px;
   transition: all 0.2s;
+  position: relative;
 }
 
 .pet-emoji {
@@ -249,27 +245,19 @@ body {
   font-weight: bold;
 }
 
-.pet-season {
-  font-size: 0.9rem;
-  opacity: 0.8;
-}
-
-.pet-ability {
-  font-size: 0.9rem;
-  color: #ddd;
-  margin-top: 4px;
-}
-
-.pet-phrase {
-  font-size: 0.9rem;
-  font-style: italic;
-  color: #ffd700;
+.pet-count {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
 }
 
 /* Игровой контейнер */
 .game-container {
-  background-size: cover;
-  background-position: center;
   justify-content: space-between;
 }
 
@@ -290,10 +278,6 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.user-name {
-  font-size: clamp(0.9rem, 4vw, 1rem);
 }
 
 .user-level {
@@ -356,7 +340,8 @@ body {
   flex-wrap: wrap;
 }
 
-.rarity-tag, .season-tag {
+.rarity-tag,
+.season-tag {
   padding: 6px 16px;
   border-radius: 30px;
   font-size: clamp(0.8rem, 3.5vw, 0.9rem);
@@ -469,11 +454,6 @@ body {
   font-weight: bold;
 }
 
-.stat-label {
-  font-size: 0.8rem;
-  opacity: 0.8;
-}
-
 /* Инвентарь */
 .inventory {
   background: rgba(255, 255, 255, 0.1);
@@ -516,79 +496,11 @@ body {
   width: fit-content;
 }
 
-/* Адаптация для очень маленьких экранов */
-@media (max-width: 360px) {
-  .action-buttons {
-    grid-template-columns: 1fr;
-  }
-  
-  .pet-tags {
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .resources {
-    flex-direction: column;
-    gap: 8px;
-  }
-}
-
-/* Адаптация для планшетов */
-@media (min-width: 768px) {
-  .app-container {
-    padding: 20px;
-  }
-  
-  .game-content {
-    max-width: 600px;
-  }
-  
-  .pets-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* Анимации */
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
-}
-
-/* Убираем выделение при тапе на мобильных */
-* {
-  -webkit-tap-highlight-color: transparent;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
-}
-
-input, textarea {
-  -webkit-user-select: auto;
-  user-select: auto;
-}
 /* Магазин кейсов */
 .case-shop {
   width: 100%;
   max-width: 600px;
   margin: 16px auto;
-}
-
-.case-shop-button {
-  background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
-  border: none;
-  padding: 12px 24px;
-  border-radius: 30px;
-  color: #000;
-  font-size: 1.1rem;
-  font-weight: bold;
-  cursor: pointer;
-  width: 100%;
-  transition: all 0.2s;
 }
 
 .cases-grid {
@@ -640,30 +552,13 @@ input, textarea {
   margin-top: 8px;
 }
 
-/* Адаптация для кейсов на мобилках */
-@media (max-width: 480px) {
-  .cases-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .case-card {
-    flex-direction: row;
-    text-align: left;
-    gap: 16px;
-  }
-  
-  .case-emoji {
-    font-size: 2.5rem;
-  }
-  
-  .case-info {
-    flex: 1;
-  }
-  
-  .case-price {
-    margin-top: 0;
-  }
+.case-card.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  filter: grayscale(1);
+  pointer-events: none;
 }
+
 /* Табы */
 .tabs {
   display: flex;
@@ -759,40 +654,91 @@ input, textarea {
   font-weight: bold;
 }
 
-.pet-count {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 4px 8px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: bold;
-}
-
-/* Кейсы */
-.case-card.disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-  filter: grayscale(1);
-}
-
-.case-card .case-info {
-  flex: 1;
-}
-
 /* Адаптация */
 @media (max-width: 480px) {
+  .cases-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .case-card {
+    flex-direction: row;
+    text-align: left;
+    gap: 16px;
+  }
+
+  .case-emoji {
+    font-size: 2.5rem;
+  }
+
+  .case-info {
+    flex: 1;
+  }
+
+  .case-price {
+    margin-top: 0;
+  }
+
   .tabs {
     flex-direction: column;
   }
-  
+
   .selected-for-collider {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .collider-grid {
     grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .action-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .pet-tags {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .resources {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (min-width: 768px) {
+  .app-container {
+    padding: 20px;
+  }
+
+  .game-content {
+    max-width: 600px;
+  }
+
+  .pets-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Анимации */
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
   }
 }
