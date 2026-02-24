@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
 
 // ==================== ТИПЫ И КОНФИГИ ====================
@@ -19,7 +19,7 @@ interface Pet {
 
 interface OwnedPet extends Pet {
   count: number;
-  level: number;          // уровень питомца (вида)
+  level: number;
 }
 
 interface Case {
@@ -120,6 +120,39 @@ const getRandomPetId = (pool: Pet[]): number => {
 };
 
 const getPetById = (id: number): Pet | undefined => PETS_DATABASE.find(p => p.id === id);
+
+// ==================== КОМПОНЕНТ TOAST ====================
+
+interface ToastMessage {
+  id: number;
+  text: string;
+}
+
+interface ToastContainerProps {
+  toasts: ToastMessage[];
+  removeToast: (id: number) => void;
+}
+
+function ToastContainer({ toasts, removeToast }: ToastContainerProps) {
+  return (
+    <div className="toast-container">
+      <AnimatePresence>
+        {toasts.map(toast => (
+          <motion.div
+            key={toast.id}
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="toast"
+            onClick={() => removeToast(toast.id)}
+          >
+            {toast.text}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 // ==================== КОМПОНЕНТ НАВБАРА ====================
 
@@ -285,7 +318,7 @@ function WheelScreen({ onComplete, starterCaseOpened }: WheelScreenProps) {
 interface GameScreenProps {
   pet: OwnedPet;
   omaygad: number;
-  level: number;           // уровень игрока (глобальный)
+  level: number;
   xp: number;
   murkocoin: number;
   feedCount: number;
@@ -476,11 +509,10 @@ function CollectionScreen({ myPets, onSelectPet }: CollectionScreenProps) {
 interface ColliderScreenProps {
   myPets: OwnedPet[];
   onLevelUp: (petId: number) => void;
-  showPopup: (msg: string) => void;
+  addToast: (msg: string) => void;
 }
 
-function ColliderScreen({ myPets, onLevelUp, showPopup }: ColliderScreenProps) {
-  // Показываем только тех, у кого count >= 2 (есть дубликаты)
+function ColliderScreen({ myPets, onLevelUp, addToast }: ColliderScreenProps) {
   const upgradablePets = myPets.filter(p => p.count >= 2);
 
   return (
@@ -522,7 +554,7 @@ function ColliderScreen({ myPets, onLevelUp, showPopup }: ColliderScreenProps) {
                     if (pet.count >= 2) {
                       onLevelUp(pet.id);
                     } else {
-                      showPopup('😢 Недостаточно дубликатов');
+                      addToast('😢 Недостаточно дубликатов');
                     }
                   }}
                 >
@@ -542,9 +574,10 @@ function ColliderScreen({ myPets, onLevelUp, showPopup }: ColliderScreenProps) {
 interface ShopScreenProps {
   onOpenCase: (caseId: string) => void;
   starterCaseOpened: boolean;
+  addToast: (msg: string) => void;
 }
 
-function ShopScreen({ onOpenCase, starterCaseOpened }: ShopScreenProps) {
+function ShopScreen({ onOpenCase, starterCaseOpened, addToast }: ShopScreenProps) {
   return (
     <div className="shop-screen">
       <h2>🛒 Магазин кейсов</h2>
@@ -559,7 +592,14 @@ function ShopScreen({ onOpenCase, starterCaseOpened }: ShopScreenProps) {
               className={`case-card ${disabled ? 'disabled' : ''}`}
               whileHover={!disabled ? { scale: 1.05 } : {}}
               whileTap={!disabled ? { scale: 0.95 } : {}}
-              onClick={() => !disabled && onOpenCase(c.id)}
+              onClick={() => {
+                if (disabled) {
+                  if (isStarterOpened) addToast('😢 Начальный кейс уже открыт');
+                  else addToast('😢 Этот кейс недоступен');
+                  return;
+                }
+                onOpenCase(c.id);
+              }}
             >
               <div className="case-emoji">{c.emoji}</div>
               <div className="case-info">
@@ -583,7 +623,7 @@ function App() {
   const [omaygad, setOmaygad] = useState(100);
   const [level, setLevel] = useState(1);
   const [xp, setXp] = useState(0);
-  const [murkocoin, setMurkocoin] = useState(999999); // бесконечная валюта
+  const [murkocoin, setMurkocoin] = useState(999999);
   const [feedCount, setFeedCount] = useState(0);
   const [inventory, setInventory] = useState<string[]>([]);
   const [myPets, setMyPets] = useState<OwnedPet[]>([]);
@@ -591,27 +631,29 @@ function App() {
   const [starterCaseOpened, setStarterCaseOpened] = useState(false);
   const [specialCooldown, setSpecialCooldown] = useState(false);
   const [currentSection, setCurrentSection] = useState<'pet' | 'collection' | 'collider' | 'shop'>('pet');
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const nextToastId = useRef(0);
 
-  // ===== Вспомогательные функции =====
+  const addToast = useCallback((text: string) => {
+    const id = nextToastId.current++;
+    setToasts(prev => [...prev, { id, text }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 3000);
+  }, []);
+
+  const removeToast = useCallback((id: number) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
 
   const addPetToCollection = useCallback((pet: Pet) => {
     setMyPets(prev => {
       const existing = prev.find(p => p.id === pet.id);
       if (existing) {
-        // уже есть такой вид – увеличиваем счётчик, уровень не меняем
         return prev.map(p => (p.id === pet.id ? { ...p, count: p.count + 1 } : p));
       }
-      // новый вид – добавляем с уровнем 1
       return [...prev, { ...pet, count: 1, level: 1 }];
     });
-  }, []);
-
-  const showPopup = useCallback((message: string) => {
-    if (window.Telegram?.WebApp?.showPopup) {
-      window.Telegram.WebApp.showPopup({ message, buttons: [{ text: 'OK' }] });
-    } else {
-      alert(message);
-    }
   }, []);
 
   const triggerRandomEvent = useCallback(() => {
@@ -629,8 +671,8 @@ function App() {
     ];
     const event = events[Math.floor(Math.random() * events.length)];
     event.effect();
-    showPopup(event.msg);
-  }, [showPopup]);
+    addToast(event.msg);
+  }, [addToast]);
 
   const openCase = useCallback(
     (caseId: string): Pet | undefined => {
@@ -638,18 +680,17 @@ function App() {
       if (!currentCase) return;
 
       if (caseId === 'starter' && starterCaseOpened) {
-        showPopup('😢 Начальный кейс уже открыт!');
+        addToast('😢 Начальный кейс уже открыт!');
         return;
       }
 
-      // Больше не проверяем деньги — бесконечная валюта
       let pool = PETS_DATABASE;
       if (currentCase.petsIds) {
         pool = PETS_DATABASE.filter(p => currentCase.petsIds?.includes(p.id));
       }
 
       if (pool.length === 0) {
-        showPopup('😢 В этом кейсе пока нет питомцев');
+        addToast('😢 В этом кейсе пока нет питомцев');
         return;
       }
 
@@ -659,16 +700,14 @@ function App() {
 
       addPetToCollection(newPet);
 
-      // Не вычитаем монеты
-
       if (caseId === 'starter') {
         setStarterCaseOpened(true);
       }
 
-      showPopup(`🎉 Вы получили: ${newPet.name} (${RARITY_CONFIG[newPet.rarity].name})! ${newPet.catchPhrase}`);
+      addToast(`🎉 Вы получили: ${newPet.name} (${RARITY_CONFIG[newPet.rarity].name})! ${newPet.catchPhrase}`);
       return newPet;
     },
-    [starterCaseOpened, addPetToCollection, showPopup]
+    [starterCaseOpened, addPetToCollection, addToast]
   );
 
   const feedPet = useCallback(() => {
@@ -685,13 +724,13 @@ function App() {
     if (newXp >= level * 100) {
       const newLevel = level + 1;
       setLevel(newLevel);
-      showPopup(`⬆️ УРОВЕНЬ ПОВЫШЕН! Теперь ты ${newLevel} уровня!`);
+      addToast(`⬆️ УРОВЕНЬ ПОВЫШЕН! Теперь ты ${newLevel} уровня!`);
     }
 
     if (Math.random() < 0.1) {
       triggerRandomEvent();
     }
-  }, [selectedPet, omaygad, xp, level, showPopup, triggerRandomEvent]);
+  }, [selectedPet, omaygad, xp, level, triggerRandomEvent, addToast]);
 
   const useSpecialAbility = useCallback(() => {
     if (!selectedPet || specialCooldown) return;
@@ -706,28 +745,28 @@ function App() {
       switch (s) {
         case 'общага':
           setOmaygad(prev => Math.min(100, prev + 30));
-          showPopup('🍪 Украл печеньку у соседа! +30 омайгадности');
+          addToast('🍪 Украл печеньку у соседа! +30 омайгадности');
           effectApplied = true;
           break;
         case 'мурино':
           setMurkocoin(prev => prev + 100);
-          showPopup('🌫️ Растворился в тумане и нашел 100 муркокоин!');
+          addToast('🌫️ Растворился в тумане и нашел 100 муркокоин!');
           effectApplied = true;
           break;
         case 'молочное':
           setXp(prev => prev + 50);
-          showPopup('🕷️ Пауки принесли 50 опыта!');
+          addToast('🕷️ Пауки принесли 50 опыта!');
           effectApplied = true;
           break;
         case 'мытищи':
           setOmaygad(prev => Math.min(100, prev + 20));
           setMurkocoin(prev => prev + 50);
-          showPopup('💧 Водяной экстрим! +20 омайгадности и +50 монет');
+          addToast('💧 Водяной экстрим! +20 омайгадности и +50 монет');
           effectApplied = true;
           break;
         case 'баня':
           setOmaygad(prev => Math.min(100, prev + 25));
-          showPopup('🛁 Жаркая баня! +25 омайгадности');
+          addToast('🛁 Жаркая баня! +25 омайгадности');
           effectApplied = true;
           break;
         default:
@@ -738,43 +777,38 @@ function App() {
 
     if (!effectApplied) {
       setOmaygad(prev => Math.min(100, prev + 20));
-      showPopup('✨ Случайная способность сработала!');
+      addToast('✨ Случайная способность сработала!');
     }
-  }, [selectedPet, specialCooldown, showPopup]);
+  }, [selectedPet, specialCooldown, addToast]);
 
-  // Повышение уровня питомца в коллайдере
   const levelUpPet = useCallback((petId: number) => {
     setMyPets(prev => {
       const pet = prev.find(p => p.id === petId);
       if (!pet || pet.count < 2) {
-        showPopup('😢 Недостаточно дубликатов для повышения уровня');
+        addToast('😢 Недостаточно дубликатов для повышения уровня');
         return prev;
       }
 
-      // Уменьшаем count на 2, повышаем level на 1
+      // Уменьшаем count на 1, повышаем level на 1
       const updated = prev.map(p => {
         if (p.id === petId) {
-          return { ...p, count: p.count - 2, level: p.level + 1 };
+          return { ...p, count: p.count - 1, level: p.level + 1 };
         }
         return p;
-      }).filter(p => p.count > 0); // удаляем, если count стал 0
+      });
 
       // Если это текущий питомец, обновляем selectedPet
       if (selectedPet && selectedPet.id === petId) {
         const updatedPet = updated.find(p => p.id === petId);
         if (updatedPet) {
           setSelectedPet(updatedPet);
-        } else {
-          // Если питомец удалён (count стал 0), сбрасываем выбор
-          setSelectedPet(null);
-          setCurrentSection('collection'); // перекидываем в коллекцию
         }
       }
 
-      showPopup(`⬆️ Уровень питомца ${pet.name} повышен до ${pet.level + 1}!`);
+      addToast(`⬆️ Уровень питомца ${pet.name} повышен до ${pet.level + 1}!`);
       return updated;
     });
-  }, [selectedPet, showPopup]);
+  }, [selectedPet, addToast]);
 
   // ===== Эффекты =====
 
@@ -785,11 +819,11 @@ function App() {
       setOmaygad(prev => {
         const newVal = prev - 3;
         if (newVal <= 30 && newVal > 20) {
-          showPopup(`⚠️ ${selectedPet.catchPhrase}! Питомец хочет жрать! Покорми мемасами`);
+          addToast(`⚠️ ${selectedPet.catchPhrase}! Питомец хочет жрать! Покорми мемасами`);
         } else if (newVal <= 20 && newVal > 0) {
-          showPopup(`😱 ${selectedPet.name} кринжует! Срочно тащи мемы!`);
+          addToast(`😱 ${selectedPet.name} кринжует! Срочно тащи мемы!`);
         } else if (newVal <= 0) {
-          showPopup(`💀 ${selectedPet.name} канул в лету... Спи спокойно, бро`);
+          addToast(`💀 ${selectedPet.name} канул в лету... Спи спокойно, бро`);
           setSelectedPet(null);
           setCurrentSection('collection');
           return 0;
@@ -799,7 +833,7 @@ function App() {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [selectedPet, showPopup]);
+  }, [selectedPet, addToast]);
 
   useEffect(() => {
     try {
@@ -809,8 +843,6 @@ function App() {
         setOmaygad(data.omaygad ?? 100);
         setLevel(data.level ?? 1);
         setXp(data.xp ?? 0);
-        // Не загружаем старую валюту, оставляем большое значение
-        // setMurkocoin(data.murkocoin ?? 999999);
         setFeedCount(data.feedCount ?? 0);
         setMyPets(data.myPets ?? []);
         setStarterCaseOpened(data.starterCaseOpened ?? false);
@@ -832,7 +864,7 @@ function App() {
       omaygad,
       level,
       xp,
-      murkocoin, // сохраняем большое значение
+      murkocoin,
       feedCount,
       myPets,
       starterCaseOpened,
@@ -852,15 +884,14 @@ function App() {
       setOmaygad(prev => Math.min(100, prev + omaygadBonus));
       setMurkocoin(prev => prev + 50);
       localStorage.setItem('lastRewardDate', today);
-      showPopup(`🎁 Ежедневный рофл: +${omaygadBonus} омайгадности и 50 муркокоин!`);
+      addToast(`🎁 Ежедневный рофл: +${omaygadBonus} омайгадности и 50 муркокоин!`);
     }
-  }, [showPopup]);
+  }, [addToast]);
 
   const handleWheelComplete = useCallback(
     (newPet: Pet) => {
       addPetToCollection(newPet);
       setStarterCaseOpened(true);
-      // После рулетки автоматически выбираем полученного питомца и переходим на главную
       const owned = { ...newPet, count: 1, level: 1 };
       setSelectedPet(owned);
       setOmaygad(100);
@@ -875,23 +906,17 @@ function App() {
     setCurrentSection('pet');
   }, []);
 
-  // Если нет выбранного питомца и стартовый кейс ещё не открыт, показываем рулетку
   if (!selectedPet && !starterCaseOpened) {
     return <WheelScreen onComplete={handleWheelComplete} starterCaseOpened={starterCaseOpened} />;
   }
 
-  // Если нет выбранного питомца, но стартовый кейс открыт – возможно, все питомцы умерли или удалены
-  // тогда отправляем в коллекцию выбрать нового
   if (!selectedPet && starterCaseOpened) {
-    // Если есть хоть один питомец, выбираем первого
     if (myPets.length > 0) {
       const firstPet = myPets[0];
       setSelectedPet(firstPet);
       setOmaygad(firstPet.happiness);
       setCurrentSection('pet');
     } else {
-      // Если питомцев вообще нет – возвращаем к рулетке? Но starterCaseOpened true, значит был, но все умерли.
-      // Можно сбросить starterCaseOpened или предложить купить кейс. Пока просто покажем коллекцию пустую.
       return (
         <div className="app-container">
           <Navbar currentSection={currentSection} onSectionChange={setCurrentSection} />
@@ -901,7 +926,6 @@ function App() {
     }
   }
 
-  // Основной рендер с навбаром
   return (
     <div className="app-container">
       <Navbar currentSection={currentSection} onSectionChange={setCurrentSection} />
@@ -918,7 +942,7 @@ function App() {
           onFeed={feedPet}
           onUseAbility={useSpecialAbility}
           onShowHelp={() =>
-            showPopup(`Как играть:
+            addToast(`Как играть:
 📦 Открывай кейсы и собирай питомцев
 🍔 Корми питомца мемасами, чтобы он не умер
 ⚡ Используй способность своего питомца
@@ -932,11 +956,12 @@ function App() {
         <CollectionScreen myPets={myPets} onSelectPet={handleSelectPet} />
       )}
       {currentSection === 'collider' && (
-        <ColliderScreen myPets={myPets} onLevelUp={levelUpPet} showPopup={showPopup} />
+        <ColliderScreen myPets={myPets} onLevelUp={levelUpPet} addToast={addToast} />
       )}
       {currentSection === 'shop' && (
-        <ShopScreen onOpenCase={openCase} starterCaseOpened={starterCaseOpened} />
+        <ShopScreen onOpenCase={openCase} starterCaseOpened={starterCaseOpened} addToast={addToast} />
       )}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }
