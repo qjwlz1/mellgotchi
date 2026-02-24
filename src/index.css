@@ -927,3 +927,75 @@ body {
     transform: translateY(-5px);
   }
 }
+/* ==================== АНИМАЦИЯ ОТКРЫТИЯ КЕЙСА ==================== */
+.case-opening-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  backdrop-filter: blur(10px);
+}
+
+.case-opening-content {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border: 2px solid gold;
+  border-radius: 40px;
+  padding: 30px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 0 50px rgba(255, 215, 0, 0.5);
+}
+
+.case-opening-header {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: gold;
+  margin-bottom: 20px;
+}
+
+.case-opening-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.case-opening-pet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  border: 3px solid;
+  border-radius: 30px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.case-opening-emoji {
+  font-size: 5rem;
+}
+
+.case-opening-name {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.case-opening-rarity {
+  padding: 6px 16px;
+  border-radius: 30px;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.case-opening-hint {
+  margin-top: 20px;
+  color: #aaa;
+  font-size: 0.9rem;
+}

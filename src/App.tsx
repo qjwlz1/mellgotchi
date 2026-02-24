@@ -198,6 +198,93 @@ function DropNotification({ pet, onClose }: DropNotificationProps) {
   );
 }
 
+// ==================== КОМПОНЕНТ АНИМАЦИИ ОТКРЫТИЯ КЕЙСА ====================
+
+interface CaseOpeningAnimationProps {
+  pool: Pet[];
+  onComplete: (pet: Pet) => void;
+  onClose: () => void;
+}
+
+function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimationProps) {
+  const [currentPet, setCurrentPet] = useState<Pet | null>(null);
+  const [isSpinning, setIsSpinning] = useState(true);
+  const intervalRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    const spinDuration = 2000;
+    const spinInterval = 50;
+    let spins = 0;
+    const maxSpins = spinDuration / spinInterval;
+
+    intervalRef.current = window.setInterval(() => {
+      const randomIndex = Math.floor(Math.random() * pool.length);
+      setCurrentPet(pool[randomIndex]);
+
+      spins++;
+      if (spins >= maxSpins) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = undefined;
+
+        // Финальный результат с учётом редкостей
+        const finalPetId = getRandomPetId(pool);
+        const finalPet = getPetById(finalPetId);
+        if (finalPet) {
+          setCurrentPet(finalPet);
+          setIsSpinning(false);
+          onComplete(finalPet);
+        }
+      }
+    }, spinInterval);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [pool, onComplete]);
+
+  if (!currentPet) return null;
+
+  const rarity = RARITY_CONFIG[currentPet.rarity];
+
+  return (
+    <motion.div
+      className="case-opening-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div
+        className="case-opening-content"
+        initial={{ scale: 0.8 }}
+        animate={{ scale: 1 }}
+        transition={{ type: 'spring', bounce: 0.3 }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="case-opening-header">🎲 Открытие кейса...</div>
+        <div className="case-opening-display">
+          <motion.div
+            key={currentPet.id + (isSpinning ? 'spin' : 'final')}
+            animate={isSpinning ? { rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] } : {}}
+            transition={{ repeat: Infinity, duration: 0.2 }}
+            className="case-opening-pet"
+            style={{ borderColor: rarity.color }}
+          >
+            <div className="case-opening-emoji">{currentPet.emoji}</div>
+            <div className="case-opening-name">{currentPet.name}</div>
+            {!isSpinning && (
+              <div className="case-opening-rarity" style={{ background: rarity.color }}>
+                {rarity.emoji} {rarity.name}
+              </div>
+            )}
+          </motion.div>
+        </div>
+        {isSpinning && <div className="case-opening-hint">Крутится...</div>}
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ==================== КОМПОНЕНТ НАВБАРА ====================
 
 interface NavbarProps {
@@ -236,7 +323,7 @@ function Navbar({ currentSection, onSectionChange }: NavbarProps) {
   );
 }
 
-// ==================== КОМПОНЕНТ РУЛЕТКИ ====================
+// ==================== КОМПОНЕНТ РУЛЕТКИ (НАЧАЛЬНЫЙ КЕЙС) ====================
 
 interface WheelScreenProps {
   onComplete: (pet: Pet) => void;
@@ -618,12 +705,12 @@ function ColliderScreen({ myPets, onLevelUp, addToast }: ColliderScreenProps) {
 // ==================== КОМПОНЕНТ МАГАЗИНА ====================
 
 interface ShopScreenProps {
-  onOpenCase: (caseId: string) => void;
+  onStartOpening: (pool: Pet[], caseId: string) => void;
   starterCaseOpened: boolean;
   addToast: (msg: string) => void;
 }
 
-function ShopScreen({ onOpenCase, starterCaseOpened, addToast }: ShopScreenProps) {
+function ShopScreen({ onStartOpening, starterCaseOpened, addToast }: ShopScreenProps) {
   return (
     <div className="shop-screen">
       <h2>🛒 Магазин кейсов</h2>
@@ -631,6 +718,14 @@ function ShopScreen({ onOpenCase, starterCaseOpened, addToast }: ShopScreenProps
         {CASES.map(c => {
           const isStarterOpened = c.id === 'starter' && starterCaseOpened;
           const disabled = !c.available || isStarterOpened;
+
+          // Формируем пул для превью
+          let pool = PETS_DATABASE;
+          if (c.petsIds) {
+            pool = PETS_DATABASE.filter(p => c.petsIds?.includes(p.id));
+          }
+          // Берём до 5 случайных для превью
+          const previewPets = [...pool].sort(() => 0.5 - Math.random()).slice(0, 5);
 
           return (
             <motion.div
@@ -644,7 +739,7 @@ function ShopScreen({ onOpenCase, starterCaseOpened, addToast }: ShopScreenProps
                   else addToast('😢 Этот кейс недоступен');
                   return;
                 }
-                onOpenCase(c.id);
+                onStartOpening(pool, c.id);
               }}
             >
               <div className="case-emoji">{c.emoji}</div>
@@ -655,6 +750,23 @@ function ShopScreen({ onOpenCase, starterCaseOpened, addToast }: ShopScreenProps
                   {c.price > 0 ? `💰 ${c.price}` : '🎁 Бесплатно'}
                 </div>
               </div>
+              {!disabled && (
+                <div className="case-preview">
+                  <div className="preview-label">Может выпасть:</div>
+                  <div className="preview-scroll">
+                    {previewPets.map(pet => (
+                      <div
+                        key={pet.id}
+                        className="preview-pet"
+                        style={{ borderColor: RARITY_CONFIG[pet.rarity].color }}
+                      >
+                        <span className="preview-emoji">{pet.emoji}</span>
+                        <span className="preview-name">{pet.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           );
         })}
@@ -679,6 +791,7 @@ function App() {
   const [currentSection, setCurrentSection] = useState<'pet' | 'collection' | 'collider' | 'shop'>('pet');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [droppedPet, setDroppedPet] = useState<Pet | null>(null);
+  const [openingCase, setOpeningCase] = useState<{ pool: Pet[]; caseId: string } | null>(null);
   const nextToastId = useRef(0);
 
   const addToast = useCallback((text: string) => {
@@ -725,40 +838,18 @@ function App() {
     addToast(event.msg);
   }, [addToast]);
 
-  const openCase = useCallback(
-    (caseId: string): Pet | undefined => {
-      const currentCase = CASES.find(c => c.id === caseId);
-      if (!currentCase) return;
+ 
 
-      if (caseId === 'starter' && starterCaseOpened) {
-        addToast('😢 Начальный кейс уже открыт!');
-        return;
-      }
-
-      let pool = PETS_DATABASE;
-      if (currentCase.petsIds) {
-        pool = PETS_DATABASE.filter(p => currentCase.petsIds?.includes(p.id));
-      }
-
-      if (pool.length === 0) {
-        addToast('😢 В этом кейсе пока нет питомцев');
-        return;
-      }
-
-      const randomPetId = getRandomPetId(pool);
-      const newPet = getPetById(randomPetId);
-      if (!newPet) return;
-
-      addPetToCollection(newPet);
-      showDropNotification(newPet);
-
+  const handleCaseOpenComplete = useCallback(
+    (pet: Pet, caseId: string) => {
+      addPetToCollection(pet);
+      showDropNotification(pet);
       if (caseId === 'starter') {
         setStarterCaseOpened(true);
       }
-
-      return newPet;
+      setOpeningCase(null);
     },
-    [starterCaseOpened, addPetToCollection, addToast, showDropNotification]
+    [addPetToCollection, showDropNotification]
   );
 
   const feedPet = useCallback(() => {
@@ -955,6 +1046,14 @@ function App() {
     setCurrentSection('pet');
   }, []);
 
+  const handleStartOpening = useCallback((pool: Pet[], caseId: string) => {
+    setOpeningCase({ pool, caseId });
+  }, []);
+
+  const handleCloseOpening = useCallback(() => {
+    setOpeningCase(null);
+  }, []);
+
   if (!selectedPet && !starterCaseOpened) {
     return <WheelScreen onComplete={handleWheelComplete} starterCaseOpened={starterCaseOpened} showDropNotification={showDropNotification} />;
   }
@@ -1008,11 +1107,20 @@ function App() {
         <ColliderScreen myPets={myPets} onLevelUp={levelUpPet} addToast={addToast} />
       )}
       {currentSection === 'shop' && (
-        <ShopScreen onOpenCase={openCase} starterCaseOpened={starterCaseOpened} addToast={addToast} />
+        <ShopScreen onStartOpening={handleStartOpening} starterCaseOpened={starterCaseOpened} addToast={addToast} />
       )}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
       <AnimatePresence>
         {droppedPet && <DropNotification pet={droppedPet} onClose={() => setDroppedPet(null)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {openingCase && (
+          <CaseOpeningAnimation
+            pool={openingCase.pool}
+            onComplete={(pet) => handleCaseOpenComplete(pet, openingCase.caseId)}
+            onClose={handleCloseOpening}
+          />
+        )}
       </AnimatePresence>
     </div>
   );
