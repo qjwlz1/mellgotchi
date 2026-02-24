@@ -41,7 +41,7 @@ body {
   padding: 0;
 }
 
-/* Основной контейнер */
+/* ==================== ОСНОВНОЙ КОНТЕЙНЕР ==================== */
 .app-container {
   width: 100%;
   min-height: 100vh;
@@ -54,7 +54,7 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Контейнер для рулетки */
+/* ==================== РУЛЕТКА (НАЧАЛЬНЫЙ КЕЙС) ==================== */
 .wheel-container {
   justify-content: center;
   align-items: center;
@@ -169,12 +169,17 @@ body {
 }
 
 .preview-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
   gap: 8px;
+  padding: 8px 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .preview-item {
+  flex: 0 0 auto;
+  width: 120px;
   background: rgba(255, 255, 255, 0.03);
   border: 2px solid;
   border-radius: 12px;
@@ -195,70 +200,41 @@ body {
   word-break: break-word;
 }
 
-/* Контейнер выбора питомца */
-.selection-container {
-  align-items: center;
-  padding: 16px;
-}
-
-.selection-container h1 {
-  font-size: clamp(2rem, 8vw, 2.5rem);
-  margin-bottom: 8px;
-}
-
-.pets-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.pet-card {
-  border-radius: 20px;
-  padding: 20px;
-  cursor: pointer;
-  border: 2px solid;
+/* ==================== НАВИГАЦИОННАЯ ПАНЕЛЬ ==================== */
+.navbar {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
-  transition: all 0.2s;
-  position: relative;
-}
-
-.pet-emoji {
-  font-size: 3rem;
-}
-
-.pet-name {
-  font-size: clamp(1.1rem, 4vw, 1.3rem);
-  text-align: center;
-  margin: 4px 0;
-}
-
-.pet-rarity {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: bold;
-}
-
-.pet-count {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+  padding: 8px;
   background: rgba(0, 0, 0, 0.5);
-  padding: 4px 8px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: bold;
+  backdrop-filter: blur(10px);
+  border-radius: 30px;
+  margin-bottom: 16px;
 }
 
-/* Игровой контейнер */
-.game-container {
-  justify-content: space-between;
+.nav-button {
+  flex: 1 1 auto;
+  min-width: 70px;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 0.9rem;
+  padding: 8px 12px;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.nav-button.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 0 10px #667eea;
+}
+
+/* ==================== ЭКРАН ПИТОМЦА ==================== */
+.game-screen {
+  width: 100%;
 }
 
 .top-panel {
@@ -360,7 +336,14 @@ body {
   padding: 0 8px;
 }
 
-/* Шкалы */
+.pet-level {
+  font-size: 1rem;
+  text-align: center;
+  color: #00ff9d;
+  font-weight: bold;
+}
+
+/* Шкала омайгадности */
 .stat-bar {
   width: 100%;
 }
@@ -496,139 +479,73 @@ body {
   width: fit-content;
 }
 
-/* Магазин кейсов */
-.case-shop {
+/* ==================== КОЛЛЕКЦИЯ ПИТОМЦЕВ ==================== */
+.collection-screen {
   width: 100%;
-  max-width: 600px;
-  margin: 16px auto;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
-.cases-grid {
-  display: flex;
-  flex-direction: row;
-  overflow-x: auto;
-  gap: 12px;
-  padding: 8px 4px;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-}
-
-.case-card {
-  flex: 0 0 auto;
-  width: 200px;
-  scroll-snap-align: start;
-}
-
-.preview-grid {
-  display: flex;
-  flex-direction: row;
-  overflow-x: auto;
-  gap: 8px;
-  padding: 8px 4px;
-}
-
-.preview-item {
-  flex: 0 0 auto;
-  width: 120px;
-}
-
-.drop-notification-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  backdrop-filter: blur(5px);
-}
-
-.drop-notification {
-  background: linear-gradient(135deg, #1a1a2e, #16213e);
-  border: 2px solid gold;
-  border-radius: 30px;
-  padding: 30px;
-  text-align: center;
-  max-width: 300px;
-  box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
-}
-
-.drop-emoji {
-  font-size: 5rem;
-  margin-bottom: 10px;
-}
-
-.drop-name {
-  font-size: 2rem;
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-.drop-rarity {
-  display: inline-block;
-  padding: 8px 20px;
-  border-radius: 30px;
-  font-weight: bold;
-  margin-bottom: 15px;
-}
-
-.drop-phrase {
-  font-style: italic;
-  color: #ffd700;
-  margin-bottom: 20px;
-}
-
-.drop-close {
-  font-size: 0.8rem;
-  opacity: 0.7;
-}
-
-.case-price {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #4caf50;
-  margin-top: 8px;
-}
-
-.case-card.disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-  filter: grayscale(1);
-  pointer-events: none;
-}
-
-/* Табы */
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin: 20px 0;
+.pets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
   width: 100%;
-  max-width: 400px;
+  margin: 0 auto;
 }
 
-.tab {
-  flex: 1;
-  padding: 12px;
-  border: none;
-  border-radius: 30px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 1rem;
-  font-weight: bold;
+.pet-card {
+  border-radius: 20px;
+  padding: 20px;
   cursor: pointer;
+  border: 2px solid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   transition: all 0.2s;
+  position: relative;
 }
 
-.tab.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+.pet-emoji {
+  font-size: 3rem;
 }
 
-/* Коллайдер */
-.collider-container {
+.pet-name {
+  font-size: clamp(1.1rem, 4vw, 1.3rem);
+  text-align: center;
+  margin: 4px 0;
+}
+
+.pet-rarity {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.pet-level-badge {
+  background: #ffd700;
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.pet-count {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+/* ==================== КОЛЛАЙДЕР ==================== */
+.collider-screen {
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
@@ -695,28 +612,255 @@ body {
   font-weight: bold;
 }
 
-/* Адаптация */
-@media (max-width: 480px) {
-  .cases-grid {
-    grid-template-columns: 1fr;
-  }
+.level-up-button {
+  background: linear-gradient(135deg, #00ff9d, #00b8ff);
+  border: none;
+  color: #000;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 8px;
+  width: 100%;
+}
 
+/* ==================== МАГАЗИН КЕЙСОВ ==================== */
+.shop-screen {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.cases-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* вертикальное расположение */
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.case-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  border-radius: 20px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.case-card:hover {
+  border-color: #ffd700;
+  transform: translateY(-2px);
+}
+
+.case-emoji {
+  font-size: 3rem;
+  text-align: center;
+}
+
+.case-info {
+  flex: 1;
+}
+
+.case-name {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.case-description {
+  font-size: 0.9rem;
+  color: #ccc;
+}
+
+.case-price {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #4caf50;
+  margin-top: 8px;
+}
+
+.case-card.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  filter: grayscale(1);
+  pointer-events: none;
+}
+
+/* Горизонтальная лента превью внутри кейса */
+.case-preview {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.preview-label {
+  font-size: 0.8rem;
+  color: #aaa;
+  margin-bottom: 6px;
+  text-align: left;
+}
+
+.preview-scroll {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  gap: 8px;
+  padding: 4px 0 8px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #888 #333;
+}
+
+.preview-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.preview-scroll::-webkit-scrollbar-track {
+  background: #333;
+  border-radius: 4px;
+}
+
+.preview-scroll::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.preview-pet {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid;
+  border-radius: 12px;
+  padding: 6px 8px;
+  width: 70px;
+  gap: 4px;
+}
+
+/* ==================== ТАБЫ (для старых экранов, если используются) ==================== */
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+  width: 100%;
+  max-width: 400px;
+}
+
+.tab {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+}
+
+/* ==================== УВЕДОМЛЕНИЯ ==================== */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.toast {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 30px;
+  padding: 12px 24px;
+  color: white;
+  font-size: 0.9rem;
+  max-width: 90%;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* ==================== УВЕДОМЛЕНИЕ О ВЫПАДЕНИИ ПИТОМЦА ==================== */
+.drop-notification-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(5px);
+}
+
+.drop-notification {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border: 2px solid gold;
+  border-radius: 30px;
+  padding: 30px;
+  text-align: center;
+  max-width: 300px;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+}
+
+.drop-emoji {
+  font-size: 5rem;
+  margin-bottom: 10px;
+}
+
+.drop-name {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.drop-rarity {
+  display: inline-block;
+  padding: 8px 20px;
+  border-radius: 30px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.drop-phrase {
+  font-style: italic;
+  color: #ffd700;
+  margin-bottom: 20px;
+}
+
+.drop-close {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+/* ==================== АДАПТАЦИЯ ДЛЯ МОБИЛЬНЫХ ==================== */
+@media (max-width: 480px) {
   .case-card {
-    flex-direction: row;
-    text-align: left;
-    gap: 16px;
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .case-emoji {
     font-size: 2.5rem;
-  }
-
-  .case-info {
-    flex: 1;
-  }
-
-  .case-price {
-    margin-top: 0;
   }
 
   .tabs {
@@ -763,7 +907,7 @@ body {
   }
 }
 
-/* Анимации */
+/* ==================== АНИМАЦИИ ==================== */
 @keyframes pulse {
   0%,
   100% {
@@ -782,97 +926,4 @@ body {
   50% {
     transform: translateY(-5px);
   }
-}
-.navbar {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
-  border-radius: 30px;
-  margin-bottom: 16px;
-}
-
-.nav-button {
-  flex: 1 1 auto;
-  min-width: 70px;
-  background: transparent;
-  border: none;
-  color: white;
-  font-size: 0.9rem;
-  padding: 8px 12px;
-  border-radius: 30px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.nav-button.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 0 10px #667eea;
-}
-.nav-button.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 0 10px #667eea;
-}
-.pet-level-badge {
-  background: #ffd700;
-  color: #000;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: bold;
-}
-.level-up-button {
-  background: linear-gradient(135deg, #00ff9d, #00b8ff);
-  border: none;
-  color: #000;
-  padding: 8px 12px;
-  border-radius: 20px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 8px;
-  width: 100%;
-}
-.collider-screen, .collection-screen, .shop-screen {
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-}
-.no-pets {
-  text-align: center;
-  color: #888;
-  margin-top: 40px;
-}
-.game-screen {
-  width: 100%;
-}
-.toast-container {
-  position: fixed;
-  bottom: 20px;
-  left: 0;
-  right: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  pointer-events: none;
-  z-index: 1000;
-}
-
-.toast {
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 30px;
-  padding: 12px 24px;
-  color: white;
-  font-size: 0.9rem;
-  max-width: 90%;
-  text-align: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  pointer-events: auto;
-  cursor: pointer;
 }
