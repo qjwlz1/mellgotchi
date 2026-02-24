@@ -541,19 +541,17 @@ function ColliderScreen({ myPets, onLevelUp, showPopup }: ColliderScreenProps) {
 
 interface ShopScreenProps {
   onOpenCase: (caseId: string) => void;
-  murkocoin: number;
   starterCaseOpened: boolean;
 }
 
-function ShopScreen({ onOpenCase, murkocoin, starterCaseOpened }: ShopScreenProps) {
+function ShopScreen({ onOpenCase, starterCaseOpened }: ShopScreenProps) {
   return (
     <div className="shop-screen">
       <h2>🛒 Магазин кейсов</h2>
       <div className="cases-grid">
         {CASES.map(c => {
           const isStarterOpened = c.id === 'starter' && starterCaseOpened;
-          const hasMoney = c.price <= murkocoin;
-          const disabled = !c.available || isStarterOpened || (c.price > 0 && !hasMoney);
+          const disabled = !c.available || isStarterOpened;
 
           return (
             <motion.div
@@ -585,7 +583,7 @@ function App() {
   const [omaygad, setOmaygad] = useState(100);
   const [level, setLevel] = useState(1);
   const [xp, setXp] = useState(0);
-  const [murkocoin, setMurkocoin] = useState(500);
+  const [murkocoin, setMurkocoin] = useState(999999); // бесконечная валюта
   const [feedCount, setFeedCount] = useState(0);
   const [inventory, setInventory] = useState<string[]>([]);
   const [myPets, setMyPets] = useState<OwnedPet[]>([]);
@@ -644,11 +642,7 @@ function App() {
         return;
       }
 
-      if (currentCase.price > 0 && murkocoin < currentCase.price) {
-        showPopup(`😢 Не хватает муркокоин! Нужно ${currentCase.price}`);
-        return;
-      }
-
+      // Больше не проверяем деньги — бесконечная валюта
       let pool = PETS_DATABASE;
       if (currentCase.petsIds) {
         pool = PETS_DATABASE.filter(p => currentCase.petsIds?.includes(p.id));
@@ -665,9 +659,7 @@ function App() {
 
       addPetToCollection(newPet);
 
-      if (currentCase.price > 0) {
-        setMurkocoin(prev => prev - currentCase.price);
-      }
+      // Не вычитаем монеты
 
       if (caseId === 'starter') {
         setStarterCaseOpened(true);
@@ -676,7 +668,7 @@ function App() {
       showPopup(`🎉 Вы получили: ${newPet.name} (${RARITY_CONFIG[newPet.rarity].name})! ${newPet.catchPhrase}`);
       return newPet;
     },
-    [starterCaseOpened, murkocoin, addPetToCollection, showPopup]
+    [starterCaseOpened, addPetToCollection, showPopup]
   );
 
   const feedPet = useCallback(() => {
@@ -817,7 +809,8 @@ function App() {
         setOmaygad(data.omaygad ?? 100);
         setLevel(data.level ?? 1);
         setXp(data.xp ?? 0);
-        setMurkocoin(data.murkocoin ?? 500);
+        // Не загружаем старую валюту, оставляем большое значение
+        // setMurkocoin(data.murkocoin ?? 999999);
         setFeedCount(data.feedCount ?? 0);
         setMyPets(data.myPets ?? []);
         setStarterCaseOpened(data.starterCaseOpened ?? false);
@@ -839,7 +832,7 @@ function App() {
       omaygad,
       level,
       xp,
-      murkocoin,
+      murkocoin, // сохраняем большое значение
       feedCount,
       myPets,
       starterCaseOpened,
@@ -942,7 +935,7 @@ function App() {
         <ColliderScreen myPets={myPets} onLevelUp={levelUpPet} showPopup={showPopup} />
       )}
       {currentSection === 'shop' && (
-        <ShopScreen onOpenCase={openCase} murkocoin={murkocoin} starterCaseOpened={starterCaseOpened} />
+        <ShopScreen onOpenCase={openCase} starterCaseOpened={starterCaseOpened} />
       )}
     </div>
   );
