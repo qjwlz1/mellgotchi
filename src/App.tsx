@@ -404,31 +404,31 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
     const spinDuration = 2000; // 2 секунды
     const spinInterval = 50;    // 50 мс
     let spins = 0;
-    const maxSpins = spinDuration / spinInterval;
+    const maxSpins = Math.floor(spinDuration / spinInterval); // гарантированно целое
 
     if (intervalRef.current) clearInterval(intervalRef.current);
 
     intervalRef.current = window.setInterval(() => {
-      if (spins < maxSpins - 1) {
+      spins++; // увеличиваем счётчик в начале итерации
+
+      if (spins < maxSpins) {
+        // Показываем случайного питомца
         const randomIndex = Math.floor(Math.random() * pool.length);
         setSpinResult(pool[randomIndex]);
       } else {
+        // Последняя итерация: показываем финального питомца
         setSpinResult(finalPetRef.current);
-      }
-
-      spins++;
-      if (spins >= maxSpins) {
         clearInterval(intervalRef.current);
         intervalRef.current = undefined;
 
-        // FIX: увеличили задержку до 500 мс, чтобы пользователь успел увидеть результат
+        // Даём 300 мс, чтобы пользователь увидел финальный результат
         setTimeout(() => {
           setIsSpinning(false);
           if (finalPetRef.current) {
             onComplete(finalPetRef.current);
             showDropNotification(finalPetRef.current);
           }
-        }, 500); // было 150
+        }, 300);
       }
     }, spinInterval);
   }, [isSpinning, starterCaseOpened, onComplete, showDropNotification, pool]);
