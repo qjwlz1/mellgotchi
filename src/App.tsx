@@ -198,7 +198,7 @@ function DropNotification({ pet, onClose }: DropNotificationProps) {
   );
 }
 
-// ==================== КОМПОНЕНТ АНИМАЦИИ ОТКРЫТИЯ КЕЙСА ====================
+// ==================== КОМПОНЕНТ АНИМАЦИИ ОТКРЫТИЯ КЕЙСА (ГОРИЗОНТАЛЬНАЯ ПРОКРУТКА) ====================
 
 interface CaseOpeningAnimationProps {
   pool: Pet[];
@@ -207,44 +207,61 @@ interface CaseOpeningAnimationProps {
 }
 
 function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimationProps) {
-  const [currentPet, setCurrentPet] = useState<Pet | null>(null);
+  const [items, setItems] = useState<Pet[]>([]);
+  const [offset, setOffset] = useState(0);
   const [isSpinning, setIsSpinning] = useState(true);
-  const intervalRef = useRef<number | undefined>(undefined);
+  const animationRef = useRef<number | undefined>(undefined);
+  const startTimeRef = useRef<number | undefined>(undefined);
+  const finalPetRef = useRef<Pet | null>(null);
+
+  // Подготавливаем бесконечную последовательность для прокрутки
+  useEffect(() => {
+    // Создаём массив, повторяющий пул несколько раз, чтобы хватило на всю анимацию
+    const repeated = [];
+    for (let i = 0; i < 30; i++) {
+      repeated.push(...pool);
+    }
+    setItems(repeated);
+  }, [pool]);
 
   useEffect(() => {
-    const spinDuration = 2000;
-    const spinInterval = 50;
-    let spins = 0;
-    const maxSpins = spinDuration / spinInterval;
+    const spinDuration = 3000; // 3 секунды анимации
+    const start = performance.now();
+    startTimeRef.current = start;
 
-    intervalRef.current = window.setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * pool.length);
-      setCurrentPet(pool[randomIndex]);
+    const animate = (now: number) => {
+      if (!startTimeRef.current) return;
+      const elapsed = now - startTimeRef.current;
+      const progress = Math.min(elapsed / spinDuration, 1);
 
-      spins++;
-      if (spins >= maxSpins) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = undefined;
+      // Скорость: быстро в начале, замедление к концу (ease-out)
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const maxOffset = items.length * 100; // достаточно большое смещение
+      const targetOffset = maxOffset * easeOut;
 
-        // Финальный результат с учётом редкостей
-        const finalPetId = getRandomPetId(pool);
-        const finalPet = getPetById(finalPetId);
-        if (finalPet) {
-          setCurrentPet(finalPet);
-          setIsSpinning(false);
-          onComplete(finalPet);
+      setOffset(targetOffset);
+
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
+      } else {
+        // Анимация завершена
+        setIsSpinning(false);
+        if (finalPetRef.current) {
+          onComplete(finalPetRef.current);
         }
       }
-    }, spinInterval);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+
+    // Выбираем финального питомца заранее
+    const finalId = getRandomPetId(pool);
+    finalPetRef.current = getPetById(finalId) || pool[0];
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [pool, onComplete]);
-
-  if (!currentPet) return null;
-
-  const rarity = RARITY_CONFIG[currentPet.rarity];
+  }, [items, pool, onComplete]);
 
   return (
     <motion.div
@@ -262,24 +279,33 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
         onClick={e => e.stopPropagation()}
       >
         <div className="case-opening-header">🎲 Открытие кейса...</div>
-        <div className="case-opening-display">
-          <motion.div
-            key={currentPet.id + (isSpinning ? 'spin' : 'final')}
-            animate={isSpinning ? { rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] } : {}}
-            transition={{ repeat: Infinity, duration: 0.2 }}
-            className="case-opening-pet"
-            style={{ borderColor: rarity.color }}
+
+        <div className="case-opening-carousel">
+          <div
+            className="case-opening-track"
+            style={{ transform: `translateX(calc(-50% - ${offset}px))` }}
           >
-            <div className="case-opening-emoji">{currentPet.emoji}</div>
-            <div className="case-opening-name">{currentPet.name}</div>
-            {!isSpinning && (
-              <div className="case-opening-rarity" style={{ background: rarity.color }}>
-                {rarity.emoji} {rarity.name}
-              </div>
-            )}
-          </motion.div>
+            {items.map((pet, idx) => (
+              <motion.div
+                key={`${pet.id}-${idx}`}
+                className="case-opening-item"
+                style={{ borderColor: RARITY_CONFIG[pet.rarity].color }}
+                animate={!isSpinning && pet.id === finalPetRef.current?.id ? { scale: [1, 1.2, 1] } : {}}
+                transition={{ duration: 0.3 }}
+              >
+                <div>{pet.emoji}</div>
+                <span>{pet.name}</span>
+              </motion.div>
+            ))}
+          </div>
+          <div className="case-opening-center" />
         </div>
-        {isSpinning && <div className="case-opening-hint">Крутится...</div>}
+
+        {isSpinning ? (
+          <div className="case-opening-hint">Крутится...</div>
+        ) : (
+          <div className="case-opening-hint">✓ Готово!</div>
+        )}
       </motion.div>
     </motion.div>
   );
@@ -324,6 +350,7 @@ function Navbar({ currentSection, onSectionChange }: NavbarProps) {
 }
 
 // ==================== КОМПОНЕНТ РУЛЕТКИ (НАЧАЛЬНЫЙ КЕЙС) ====================
+// (Превью убрано)
 
 interface WheelScreenProps {
   onComplete: (pet: Pet) => void;
@@ -378,7 +405,7 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
     };
   }, []);
 
-  const starterPets = PETS_DATABASE.filter(p => [1, 2, 3, 9].includes(p.id));
+  // Превью убрано
 
   return (
     <div className="app-container wheel-container">
@@ -425,28 +452,14 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
           {isSpinning ? '🎲 КРУТИТСЯ...' : '🎰 ОТКРЫТЬ КЕЙС'}
         </motion.button>
 
-        <div className="wheel-preview">
-          <h3>В этом кейсе:</h3>
-          <div className="preview-grid">
-            {starterPets.map(pet => (
-              <motion.div
-                key={pet.id}
-                className="preview-item"
-                whileHover={{ scale: 1.05 }}
-                style={{ borderColor: RARITY_CONFIG[pet.rarity].color }}
-              >
-                <span className="preview-emoji">{pet.emoji}</span>
-                <span className="preview-name">{pet.name}</span>
-              </motion.div>
-            ))}
-          </div>
-        </div>
+        {/* Превью удалено */}
       </div>
     </div>
   );
 }
 
 // ==================== КОМПОНЕНТ ЭКРАНА ПИТОМЦА ====================
+// (без изменений, но оставлен для полноты)
 
 interface GameScreenProps {
   pet: OwnedPet;
@@ -594,6 +607,7 @@ function GameScreen({
 }
 
 // ==================== КОМПОНЕНТ КОЛЛЕКЦИИ ====================
+// (без изменений)
 
 interface CollectionScreenProps {
   myPets: OwnedPet[];
@@ -638,6 +652,7 @@ function CollectionScreen({ myPets, onSelectPet }: CollectionScreenProps) {
 }
 
 // ==================== КОМПОНЕНТ КОЛЛАЙДЕРА ====================
+// (без изменений)
 
 interface ColliderScreenProps {
   myPets: OwnedPet[];
@@ -703,6 +718,7 @@ function ColliderScreen({ myPets, onLevelUp, addToast }: ColliderScreenProps) {
 }
 
 // ==================== КОМПОНЕНТ МАГАЗИНА ====================
+// (превью убрано)
 
 interface ShopScreenProps {
   onStartOpening: (pool: Pet[], caseId: string) => void;
@@ -719,13 +735,11 @@ function ShopScreen({ onStartOpening, starterCaseOpened, addToast }: ShopScreenP
           const isStarterOpened = c.id === 'starter' && starterCaseOpened;
           const disabled = !c.available || isStarterOpened;
 
-          // Формируем пул для превью
+          // Формируем пул
           let pool = PETS_DATABASE;
           if (c.petsIds) {
             pool = PETS_DATABASE.filter(p => c.petsIds?.includes(p.id));
           }
-          // Берём до 5 случайных для превью
-          const previewPets = [...pool].sort(() => 0.5 - Math.random()).slice(0, 5);
 
           return (
             <motion.div
@@ -750,23 +764,7 @@ function ShopScreen({ onStartOpening, starterCaseOpened, addToast }: ShopScreenP
                   {c.price > 0 ? `💰 ${c.price}` : '🎁 Бесплатно'}
                 </div>
               </div>
-              {!disabled && (
-                <div className="case-preview">
-                  <div className="preview-label">Может выпасть:</div>
-                  <div className="preview-scroll">
-                    {previewPets.map(pet => (
-                      <div
-                        key={pet.id}
-                        className="preview-pet"
-                        style={{ borderColor: RARITY_CONFIG[pet.rarity].color }}
-                      >
-                        <span className="preview-emoji">{pet.emoji}</span>
-                        <span className="preview-name">{pet.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Превью полностью удалено */}
             </motion.div>
           );
         })}
@@ -837,8 +835,6 @@ function App() {
     event.effect();
     addToast(event.msg);
   }, [addToast]);
-
- 
 
   const handleCaseOpenComplete = useCallback(
     (pet: Pet, caseId: string) => {
