@@ -191,10 +191,23 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
   const targetOffsetRef = useRef<number>(0);
   const startOffsetRef = useRef<number>(0);
   const completedRef = useRef(false);
+  const animationStartedRef = useRef(false);
+  const autoCloseTimerRef = useRef<number | undefined>(undefined);
 
   const ITEM_WIDTH = 80;
 
+  // FIX: очистка таймера при размонтировании
   useEffect(() => {
+    return () => {
+      if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    // FIX: предотвращаем повторный запуск
+    if (animationStartedRef.current) return;
+    animationStartedRef.current = true;
+
     const finalPet = pool[Math.floor(Math.random() * pool.length)];
     finalPetRef.current = finalPet;
     console.log('[Case] Финальный питомец:', finalPet.name, 'ID:', finalPet.id);
@@ -226,7 +239,8 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
   useEffect(() => {
     if (!containerRef.current || items.length === 0) return;
 
-    const spinDuration = 3000;
+    // FIX: уменьшим длительность анимации для более быстрого закрытия
+    const spinDuration = 2500; // было 3000
     const startTime = performance.now();
     startTimeRef.current = startTime;
 
@@ -243,11 +257,17 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate);
       } else {
+        // FIX: устанавливаем точное финальное смещение
+        setOffset(targetOffsetRef.current);
         setIsSpinning(false);
         if (finalPetRef.current && !completedRef.current) {
           completedRef.current = true;
           onComplete(finalPetRef.current);
         }
+        // FIX: автозакрытие через 1.5 секунды
+        autoCloseTimerRef.current = window.setTimeout(() => {
+          onClose();
+        }, 1500);
       }
     };
 
@@ -256,10 +276,12 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [items, onComplete]);
+  }, [items, onComplete, onClose]);
 
   const handleOverlayClick = () => {
     if (!isSpinning) {
+      // FIX: отменяем таймер автозакрытия при ручном закрытии
+      if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
       onClose();
     }
   };
@@ -309,7 +331,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
         {isSpinning ? (
           <div className="case-opening-hint">Крутится...</div>
         ) : (
-          <div className="case-opening-hint">✓ Готово! Нажмите, чтобы закрыть</div>
+          <div className="case-opening-hint">✓ Готово! Закроется через 1.5 сек</div>
         )}
       </motion.div>
     </motion.div>
@@ -399,14 +421,14 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
         clearInterval(intervalRef.current);
         intervalRef.current = undefined;
 
-        // Небольшая задержка, чтобы пользователь увидел финального питомца
+        // FIX: увеличили задержку до 500 мс, чтобы пользователь успел увидеть результат
         setTimeout(() => {
           setIsSpinning(false);
           if (finalPetRef.current) {
             onComplete(finalPetRef.current);
             showDropNotification(finalPetRef.current);
           }
-        }, 150);
+        }, 500); // было 150
       }
     }, spinInterval);
   }, [isSpinning, starterCaseOpened, onComplete, showDropNotification, pool]);

@@ -114,6 +114,8 @@ body {
   gap: 12px;
   border-radius: 16px;
   padding: 16px;
+  /* FIX: фиксированная минимальная высота для стабильности */
+  min-height: 200px;
 }
 
 .wheel-emoji {
@@ -121,19 +123,23 @@ body {
 }
 
 .wheel-name {
-  font-size: clamp(1.2rem, 5vw, 1.5rem);
+  font-size: clamp(1rem, 4vw, 1.5rem);
   font-weight: bold;
   text-align: center;
   word-break: break-word;
   max-width: 100%;
   padding: 0 4px;
+  /* FIX: разрешаем перенос и фиксируем высоту строки */
+  line-height: 1.2;
+  white-space: normal;
 }
 
 .wheel-rarity {
-  font-size: clamp(0.9rem, 4vw, 1.1rem);
+  font-size: clamp(0.8rem, 3vw, 1.1rem);
   opacity: 0.8;
   word-break: break-word;
   max-width: 100%;
+  white-space: normal;
 }
 
 .wheel-placeholder {
@@ -885,13 +891,21 @@ body {
   /* Уменьшаем элементы карусели на маленьких экранах */
   .case-opening-item {
     width: 60px;
-    height: 60px;
+    /* FIX: увеличиваем высоту, чтобы поместился текст */
+    height: 80px;
     font-size: 2rem;
   }
 
   .case-opening-item span {
-    font-size: 0.7rem;
-    max-width: 50px;
+    font-size: 0.65rem;
+    max-width: 55px;
+    /* FIX: разрешаем перенос текста, максимум 2 строки */
+    white-space: normal;
+    overflow: hidden;
+    display: -webkit-box;
+    line-clamp: 2; /* стандартное свойство */    
+    -webkit-box-orient: vertical;
+    text-overflow: ellipsis;
   }
 
   .case-opening-center {
@@ -919,6 +933,7 @@ body {
   }
   .wheel-result {
     padding: 8px;
+    min-height: 180px; /* чуть меньше для совсем маленьких */
   }
 }
 
