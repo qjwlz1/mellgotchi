@@ -182,86 +182,82 @@ interface CaseOpeningAnimationProps {
 
 function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimationProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+
   const [items, setItems] = useState<Pet[]>([]);
   const [offset, setOffset] = useState(0);
   const [isSpinning, setIsSpinning] = useState(true);
-  const animationRef = useRef<number | undefined>(undefined);
-  const startTimeRef = useRef<number | undefined>(undefined);
+
+  const animationRef = useRef<number | null>(null);
+  const finalIndexRef = useRef<number>(0);
   const finalPetRef = useRef<Pet | null>(null);
-  const targetOffsetRef = useRef<number>(0);
-  const startOffsetRef = useRef<number>(0);
   const completedRef = useRef(false);
-  const animationStartedRef = useRef(false);
-  const autoCloseTimerRef = useRef<number | undefined>(undefined);
 
-  const ITEM_WIDTH = 80;
-
+  // 1️⃣ Создание списка и выбор финального питомца
   useEffect(() => {
-    return () => {
-      if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (animationStartedRef.current) return;
-    animationStartedRef.current = true;
-
     const finalPet = pool[Math.floor(Math.random() * pool.length)];
     finalPetRef.current = finalPet;
-    console.log('[Case] Финальный питомец:', finalPet.name, 'ID:', finalPet.id);
 
-    const repeatCount = 5;
-    const baseItems = [];
+    const repeatCount = 6;
+    const generated: Pet[] = [];
+
     for (let i = 0; i < repeatCount; i++) {
-      baseItems.push(...pool);
+      generated.push(...pool);
     }
-    const targetIndex = Math.floor(baseItems.length / 2);
-    baseItems[targetIndex] = finalPetRef.current;
-    setItems(baseItems);
 
-    if (containerRef.current) {
-      const containerWidth = containerRef.current.clientWidth;
-      const targetOffset = targetIndex * ITEM_WIDTH - (containerWidth / 2 - ITEM_WIDTH / 2);
-      targetOffsetRef.current = targetOffset;
+    const middleIndex = Math.floor(generated.length / 2);
+    generated[middleIndex] = finalPet;
 
-      const maxOffset = baseItems.length * ITEM_WIDTH;
-      let startOffset = targetOffset + 2000;
-      if (startOffset > maxOffset) {
-        startOffset = targetOffset + (startOffset - targetOffset) % (maxOffset - targetOffset);
-      }
-      startOffsetRef.current = startOffset;
-      setOffset(startOffset);
-    }
+    finalIndexRef.current = middleIndex;
+    setItems(generated);
   }, [pool]);
 
+  // 2️⃣ Анимация
   useEffect(() => {
-    if (!containerRef.current || items.length === 0) return;
+    if (!containerRef.current || !trackRef.current || items.length === 0) return;
 
-    const spinDuration = 2500;
+    const container = containerRef.current;
+    const track = trackRef.current;
+    const finalIndex = finalIndexRef.current;
+
+    const itemElement = track.children[finalIndex] as HTMLElement;
+    if (!itemElement) return;
+
+    const containerWidth = container.clientWidth;
+    const itemWidth = itemElement.clientWidth;
+    const itemLeft = itemElement.offsetLeft;
+
+    const targetOffset =
+      itemLeft - (containerWidth / 2 - itemWidth / 2);
+
+    const startOffset = targetOffset + containerWidth * 2;
+
+    const duration = 2500;
     const startTime = performance.now();
-    startTimeRef.current = startTime;
 
     const animate = (now: number) => {
-      if (!startTimeRef.current) return;
-      const elapsed = now - startTimeRef.current;
-      const progress = Math.min(elapsed / spinDuration, 1);
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
 
       const easeOut = 1 - Math.pow(1 - progress, 3);
-      const currentOffset =
-        startOffsetRef.current - (startOffsetRef.current - targetOffsetRef.current) * easeOut;
-      setOffset(currentOffset);
+
+      const current =
+        startOffset - (startOffset - targetOffset) * easeOut;
+
+      setOffset(current);
 
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate);
       } else {
-        setOffset(targetOffsetRef.current);
+        setOffset(targetOffset);
         setIsSpinning(false);
-        if (finalPetRef.current && !completedRef.current) {
+
+        if (!completedRef.current && finalPetRef.current) {
           completedRef.current = true;
           onComplete(finalPetRef.current);
         }
-        // Автозакрытие через 0.8 секунды
-        autoCloseTimerRef.current = window.setTimeout(() => {
+
+        setTimeout(() => {
           onClose();
         }, 800);
       }
@@ -274,32 +270,26 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
     };
   }, [items, onComplete, onClose]);
 
-  const handleOverlayClick = () => {
-    if (!isSpinning) {
-      if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
-      onClose();
-    }
-  };
-
   return (
     <motion.div
       className="case-opening-overlay"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      onClick={handleOverlayClick}
+      onClick={() => !isSpinning && onClose()}
     >
       <motion.div
         className="case-opening-content"
         initial={{ scale: 0.8 }}
         animate={{ scale: 1 }}
         transition={{ type: 'spring', bounce: 0.3 }}
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="case-opening-header">🎲 Открытие кейса...</div>
 
         <div className="case-opening-carousel" ref={containerRef}>
           <div
+            ref={trackRef}
             className="case-opening-track"
             style={{ transform: `translateX(-${offset}px)` }}
           >
@@ -309,7 +299,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
                 className="case-opening-item"
                 style={{ borderColor: RARITY_CONFIG[pet.rarity].color }}
                 animate={
-                  !isSpinning && pet.id === finalPetRef.current?.id
+                  !isSpinning && idx === finalIndexRef.current
                     ? { scale: [1, 1.2, 1] }
                     : {}
                 }
@@ -320,13 +310,14 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
               </motion.div>
             ))}
           </div>
+
           <div className="case-opening-center" />
         </div>
 
         {isSpinning ? (
           <div className="case-opening-hint">Крутится...</div>
         ) : (
-          <div className="case-opening-hint">✓ Готово! Закроется через секунду</div>
+          <div className="case-opening-hint">✓ Готово!</div>
         )}
       </motion.div>
     </motion.div>
