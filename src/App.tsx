@@ -196,7 +196,6 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
 
   const ITEM_WIDTH = 80;
 
-  // FIX: очистка таймера при размонтировании
   useEffect(() => {
     return () => {
       if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
@@ -204,7 +203,6 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
   }, []);
 
   useEffect(() => {
-    // FIX: предотвращаем повторный запуск
     if (animationStartedRef.current) return;
     animationStartedRef.current = true;
 
@@ -239,8 +237,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
   useEffect(() => {
     if (!containerRef.current || items.length === 0) return;
 
-    // FIX: уменьшим длительность анимации для более быстрого закрытия
-    const spinDuration = 2500; // было 3000
+    const spinDuration = 2500;
     const startTime = performance.now();
     startTimeRef.current = startTime;
 
@@ -257,17 +254,16 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate);
       } else {
-        // FIX: устанавливаем точное финальное смещение
         setOffset(targetOffsetRef.current);
         setIsSpinning(false);
         if (finalPetRef.current && !completedRef.current) {
           completedRef.current = true;
           onComplete(finalPetRef.current);
         }
-        // FIX: автозакрытие через 1.5 секунды
+        // Автозакрытие через 0.8 секунды
         autoCloseTimerRef.current = window.setTimeout(() => {
           onClose();
-        }, 1500);
+        }, 800);
       }
     };
 
@@ -280,7 +276,6 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
 
   const handleOverlayClick = () => {
     if (!isSpinning) {
-      // FIX: отменяем таймер автозакрытия при ручном закрытии
       if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
       onClose();
     }
@@ -331,7 +326,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
         {isSpinning ? (
           <div className="case-opening-hint">Крутится...</div>
         ) : (
-          <div className="case-opening-hint">✓ Готово! Закроется через 1.5 сек</div>
+          <div className="case-opening-hint">✓ Готово! Закроется через секунду</div>
         )}
       </motion.div>
     </motion.div>
@@ -377,6 +372,7 @@ function Navbar({ currentSection, onSectionChange }: NavbarProps) {
 }
 
 // ==================== КОМПОНЕНТ РУЛЕТКИ (НАЧАЛЬНЫЙ КЕЙС) ====================
+// Полностью переписан с использованием requestAnimationFrame
 
 interface WheelScreenProps {
   onComplete: (pet: Pet) => void;
@@ -386,9 +382,10 @@ interface WheelScreenProps {
 
 function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: WheelScreenProps) {
   const [isSpinning, setIsSpinning] = useState(false);
-  const [spinResult, setSpinResult] = useState<Pet | null>(null);
-  const intervalRef = useRef<number | undefined>(undefined);
+  const [currentDisplayPet, setCurrentDisplayPet] = useState<Pet | null>(null);
   const finalPetRef = useRef<Pet | null>(null);
+  const animationRef = useRef<number | undefined>(undefined);
+  const startTimeRef = useRef<number | undefined>(undefined);
   const pool = PETS_DATABASE.filter(p => [1, 2, 3, 9].includes(p.id));
 
   const spinWheel = useCallback(() => {
@@ -399,43 +396,44 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
     console.log('[Wheel] Финальный питомец:', finalPet.name, 'ID:', finalPet.id);
 
     setIsSpinning(true);
-    setSpinResult(null);
+    setCurrentDisplayPet(null);
 
     const spinDuration = 2000; // 2 секунды
-    const spinInterval = 50;    // 50 мс
-    let spins = 0;
-    const maxSpins = Math.floor(spinDuration / spinInterval); // гарантированно целое
+    const startTime = performance.now();
+    startTimeRef.current = startTime;
 
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    const animate = (now: number) => {
+      if (!startTimeRef.current) return;
+      const elapsed = now - startTimeRef.current;
+      const progress = Math.min(elapsed / spinDuration, 1);
 
-    intervalRef.current = window.setInterval(() => {
-      spins++; // увеличиваем счётчик в начале итерации
-
-      if (spins < maxSpins) {
-        // Показываем случайного питомца
-        const randomIndex = Math.floor(Math.random() * pool.length);
-        setSpinResult(pool[randomIndex]);
+      // Меняем изображение примерно каждые 50 мс для эффекта прокрутки
+      if (progress < 1) {
+        if (Math.floor(elapsed / 50) !== Math.floor((elapsed - 16) / 50)) {
+          const randomIndex = Math.floor(Math.random() * pool.length);
+          setCurrentDisplayPet(pool[randomIndex]);
+        }
+        animationRef.current = requestAnimationFrame(animate);
       } else {
-        // Последняя итерация: показываем финального питомца
-        setSpinResult(finalPetRef.current);
-        clearInterval(intervalRef.current);
-        intervalRef.current = undefined;
-
-        // Даём 300 мс, чтобы пользователь увидел финальный результат
+        // Анимация завершена — показываем финального питомца
+        setCurrentDisplayPet(finalPetRef.current);
+        setIsSpinning(false);
+        // Даём 300 мс, чтобы пользователь увидел результат
         setTimeout(() => {
-          setIsSpinning(false);
           if (finalPetRef.current) {
             onComplete(finalPetRef.current);
             showDropNotification(finalPetRef.current);
           }
         }, 300);
       }
-    }, spinInterval);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
   }, [isSpinning, starterCaseOpened, onComplete, showDropNotification, pool]);
 
   useEffect(() => {
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
   }, []);
 
@@ -453,17 +451,17 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
           transition={{ duration: 2, ease: 'easeOut' }}
         >
           <div className="wheel-display">
-            {spinResult ? (
+            {currentDisplayPet ? (
               <motion.div
-                key={spinResult.name + (isSpinning ? 'spin' : 'final')}
+                key={currentDisplayPet.id + (isSpinning ? 'spin' : 'final')}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 className="wheel-result"
-                style={{ background: `${RARITY_CONFIG[spinResult.rarity].color}30` }}
+                style={{ background: `${RARITY_CONFIG[currentDisplayPet.rarity].color}30` }}
               >
-                <span className="wheel-emoji">{spinResult.emoji}</span>
-                <div className="wheel-name">{spinResult.name}</div>
-                <div className="wheel-rarity">{RARITY_CONFIG[spinResult.rarity].name}</div>
+                <span className="wheel-emoji">{currentDisplayPet.emoji}</span>
+                <div className="wheel-name">{currentDisplayPet.name}</div>
+                <div className="wheel-rarity">{RARITY_CONFIG[currentDisplayPet.rarity].name}</div>
               </motion.div>
             ) : (
               <div className="wheel-placeholder">
