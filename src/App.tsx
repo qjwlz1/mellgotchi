@@ -228,21 +228,17 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
     for (let i = 0; i < repeatCount; i++) {
       baseItems.push(...pool);
     }
-    // Помещаем финального питомца в центр, чтобы гарантированно остановиться на нём
     const targetIndex = Math.floor(baseItems.length / 2);
     baseItems[targetIndex] = finalPetRef.current;
     setItems(baseItems);
 
     if (containerRef.current) {
       const containerWidth = containerRef.current.clientWidth;
-      // Целевое смещение: элемент с targetIndex должен быть по центру
       const targetOffset = targetIndex * ITEM_WIDTH - (containerWidth / 2 - ITEM_WIDTH / 2);
       targetOffsetRef.current = targetOffset;
 
       const maxOffset = baseItems.length * ITEM_WIDTH;
-      // Начинаем с большого смещения, чтобы двигаться влево (offset уменьшается)
-      let startOffset = targetOffset + 2000; // большое смещение вправо
-      // Если startOffset слишком большой, обернём, но так, чтобы он оставался > targetOffset
+      let startOffset = targetOffset + 2000;
       if (startOffset > maxOffset) {
         startOffset = targetOffset + (startOffset - targetOffset) % (maxOffset - targetOffset);
       }
@@ -263,9 +259,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
       const elapsed = now - startTimeRef.current;
       const progress = Math.min(elapsed / spinDuration, 1);
 
-      // easeOutCubic: плавное замедление
       const easeOut = 1 - Math.pow(1 - progress, 3);
-      // offset уменьшается от startOffset до targetOffset (движение влево)
       const currentOffset =
         startOffsetRef.current - (startOffsetRef.current - targetOffsetRef.current) * easeOut;
       setOffset(currentOffset);
@@ -378,6 +372,7 @@ function Navbar({ currentSection, onSectionChange }: NavbarProps) {
 }
 
 // ==================== КОМПОНЕНТ РУЛЕТКИ (НАЧАЛЬНЫЙ КЕЙС) ====================
+// ИСПРАВЛЕНО: теперь финальный питомец показывается на последнем кадре
 
 interface WheelScreenProps {
   onComplete: (pet: Pet) => void;
@@ -389,9 +384,18 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinResult, setSpinResult] = useState<Pet | null>(null);
   const intervalRef = useRef<number | undefined>(undefined);
+  const finalPetRef = useRef<Pet | null>(null); // финальный питомец, выбранный заранее
 
   const spinWheel = useCallback(() => {
     if (isSpinning || starterCaseOpened) return;
+
+    // Определяем финального питомца ДО начала анимации
+    const pool = PETS_DATABASE.filter(p => [1, 2, 3, 9].includes(p.id));
+    const finalId = getRandomPetId(pool);
+    const finalPet = getPetById(finalId);
+    if (!finalPet) return;
+    finalPetRef.current = finalPet;
+    console.log('[Wheel] Финальный питомец:', finalPet.name, 'ID:', finalPet.id);
 
     setIsSpinning(true);
     setSpinResult(null);
@@ -404,25 +408,27 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
     if (intervalRef.current) clearInterval(intervalRef.current);
 
     intervalRef.current = window.setInterval(() => {
-      const starterPets = PETS_DATABASE.filter(p => [1, 2, 3, 9].includes(p.id));
-      const randomIndex = Math.floor(Math.random() * starterPets.length);
-      setSpinResult(starterPets[randomIndex]);
+      // Показываем случайных питомцев, но на последней итерации показываем финального
+      if (spins < maxSpins - 1) {
+        const starterPets = PETS_DATABASE.filter(p => [1, 2, 3, 9].includes(p.id));
+        const randomIndex = Math.floor(Math.random() * starterPets.length);
+        setSpinResult(starterPets[randomIndex]);
+      } else {
+        // Последний кадр — показываем финального питомца
+        setSpinResult(finalPetRef.current);
+      }
 
       spins++;
       if (spins >= maxSpins) {
         clearInterval(intervalRef.current);
         intervalRef.current = undefined;
 
-        const pool = PETS_DATABASE.filter(p => [1, 2, 3, 9].includes(p.id));
-        const randomPetId = getRandomPetId(pool);
-        const newPet = getPetById(randomPetId);
-        if (newPet) {
-          console.log('[Wheel] Выпал питомец:', newPet.name, 'ID:', newPet.id); // отладка
-          setSpinResult(newPet);
-          onComplete(newPet);
-          showDropNotification(newPet);
-        }
+        // Завершаем анимацию
         setIsSpinning(false);
+        if (finalPetRef.current) {
+          onComplete(finalPetRef.current);
+          showDropNotification(finalPetRef.current);
+        }
       }
     }, spinInterval);
   }, [isSpinning, starterCaseOpened, onComplete, showDropNotification]);
@@ -449,7 +455,7 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
           <div className="wheel-display">
             {spinResult ? (
               <motion.div
-                key={spinResult.name}
+                key={spinResult.name + (isSpinning ? 'spin' : 'final')}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 className="wheel-result"
