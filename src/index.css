@@ -124,11 +124,16 @@ body {
   font-size: clamp(1.2rem, 5vw, 1.5rem);
   font-weight: bold;
   text-align: center;
+  word-break: break-word;
+  max-width: 100%;
+  padding: 0 4px;
 }
 
 .wheel-rarity {
   font-size: clamp(0.9rem, 4vw, 1.1rem);
   opacity: 0.8;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .wheel-placeholder {
@@ -902,14 +907,18 @@ body {
   .wheel-drum {
     padding: 8px;
   }
-  .wheel-emoji {
-    font-size: 3rem;
-  }
   .wheel-name {
     font-size: 1rem;
+    white-space: normal;
+    word-break: break-word;
+    max-width: 90%;
   }
   .wheel-rarity {
     font-size: 0.8rem;
+    white-space: normal;
+  }
+  .wheel-result {
+    padding: 8px;
   }
 }
 

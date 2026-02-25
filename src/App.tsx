@@ -176,8 +176,8 @@ function DropNotification({ pet, onClose }: DropNotificationProps) {
 
 interface CaseOpeningAnimationProps {
   pool: Pet[];
-  onComplete: (pet: Pet) => void;  // вызывается после остановки анимации (питомец добавлен)
-  onClose: () => void;              // закрытие окна (клик по overlay)
+  onComplete: (pet: Pet) => void;
+  onClose: () => void;
 }
 
 function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimationProps) {
@@ -190,7 +190,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
   const finalPetRef = useRef<Pet | null>(null);
   const targetOffsetRef = useRef<number>(0);
   const startOffsetRef = useRef<number>(0);
-  const completedRef = useRef(false); // защита от повторного onComplete
+  const completedRef = useRef(false);
 
   const ITEM_WIDTH = 80;
 
@@ -244,7 +244,6 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
         animationRef.current = requestAnimationFrame(animate);
       } else {
         setIsSpinning(false);
-        // вызываем onComplete только один раз, не закрывая окно
         if (finalPetRef.current && !completedRef.current) {
           completedRef.current = true;
           onComplete(finalPetRef.current);
@@ -259,7 +258,6 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
     };
   }, [items, onComplete]);
 
-  // закрытие только после окончания анимации
   const handleOverlayClick = () => {
     if (!isSpinning) {
       onClose();
@@ -381,8 +379,8 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
     setIsSpinning(true);
     setSpinResult(null);
 
-    const spinDuration = 2000;
-    const spinInterval = 50;
+    const spinDuration = 2000; // 2 секунды
+    const spinInterval = 50;    // 50 мс
     let spins = 0;
     const maxSpins = spinDuration / spinInterval;
 
@@ -400,12 +398,15 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
       if (spins >= maxSpins) {
         clearInterval(intervalRef.current);
         intervalRef.current = undefined;
-        setIsSpinning(false);
-        // Сразу завершаем – экран закроется, питомец добавится
-        if (finalPetRef.current) {
-          onComplete(finalPetRef.current);
-          showDropNotification(finalPetRef.current);
-        }
+
+        // Небольшая задержка, чтобы пользователь увидел финального питомца
+        setTimeout(() => {
+          setIsSpinning(false);
+          if (finalPetRef.current) {
+            onComplete(finalPetRef.current);
+            showDropNotification(finalPetRef.current);
+          }
+        }, 150);
       }
     }, spinInterval);
   }, [isSpinning, starterCaseOpened, onComplete, showDropNotification, pool]);
@@ -844,7 +845,6 @@ function App() {
       if (caseId === 'starter') {
         setStarterCaseOpened(true);
       }
-      // окно остаётся открытым до клика
     },
     [addPetToCollection, showDropNotification]
   );
