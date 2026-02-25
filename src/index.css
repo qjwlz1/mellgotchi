@@ -156,6 +156,11 @@ body {
   margin: 0 auto;
 }
 
+.wheel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ==================== НАВИГАЦИОННАЯ ПАНЕЛЬ ==================== */
 .navbar {
   display: flex;
@@ -471,6 +476,8 @@ body {
   font-size: clamp(1.1rem, 4vw, 1.3rem);
   text-align: center;
   margin: 4px 0;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .pet-rarity {
@@ -605,6 +612,9 @@ body {
   gap: 12px;
   cursor: pointer;
   transition: all 0.2s;
+  /* FIX: перенос текста на маленьких экранах */
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .case-card:hover {
@@ -619,17 +629,21 @@ body {
 
 .case-info {
   flex: 1;
+  min-width: 0; /* FIX: позволяет сжиматься */
+  width: 100%;
 }
 
 .case-name {
   font-size: 1.1rem;
   font-weight: bold;
   color: #ffd700;
+  word-break: break-word;
 }
 
 .case-description {
   font-size: 0.9rem;
   color: #ccc;
+  word-break: break-word;
 }
 
 .case-price {
@@ -709,6 +723,7 @@ body {
   font-size: 2rem;
   font-weight: bold;
   margin-bottom: 10px;
+  word-break: break-word;
 }
 
 .drop-rarity {
@@ -723,6 +738,7 @@ body {
   font-style: italic;
   color: #ffd700;
   margin-bottom: 20px;
+  word-break: break-word;
 }
 
 .drop-close {
@@ -834,10 +850,19 @@ body {
   .case-card {
     flex-direction: column;
     align-items: flex-start;
+    padding: 12px; /* уменьшаем padding */
   }
 
   .case-emoji {
     font-size: 2.5rem;
+  }
+
+  .case-name {
+    font-size: 1rem;
+  }
+
+  .case-description {
+    font-size: 0.8rem;
   }
 
   .tabs {
