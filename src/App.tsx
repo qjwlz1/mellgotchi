@@ -374,6 +374,9 @@ function Navbar({ currentSection, onSectionChange }: NavbarProps) {
 // ==================== КОМПОНЕНТ РУЛЕТКИ (НАЧАЛЬНЫЙ КЕЙС) ====================
 // Полностью переписан с использованием requestAnimationFrame
 
+// ==================== КОМПОНЕНТ РУЛЕТКИ (НАЧАЛЬНЫЙ КЕЙС) ====================
+// Исправленная версия с requestAnimationFrame
+
 interface WheelScreenProps {
   onComplete: (pet: Pet) => void;
   starterCaseOpened: boolean;
@@ -382,9 +385,10 @@ interface WheelScreenProps {
 
 function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: WheelScreenProps) {
   const [isSpinning, setIsSpinning] = useState(false);
-  const [spinResult, setSpinResult] = useState<Pet | null>(null);
-  const intervalRef = useRef<number | undefined>(undefined);
+  const [displayPet, setDisplayPet] = useState<Pet | null>(null);
   const finalPetRef = useRef<Pet | null>(null);
+  const animationRef = useRef<number | undefined>(undefined);
+  const startTimeRef = useRef<number | undefined>(undefined);
   const pool = PETS_DATABASE.filter(p => [1, 2, 3, 9].includes(p.id));
 
   const spinWheel = useCallback(() => {
@@ -395,46 +399,46 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
     console.log('[Wheel] Финальный питомец:', finalPet.name);
 
     setIsSpinning(true);
-    setSpinResult(null);
+    setDisplayPet(null);
 
     const spinDuration = 2000; // 2 секунды
-    const spinInterval = 40;    // 40 мс для более плавной смены
-    let spins = 0;
-    const maxSpins = Math.floor(spinDuration / spinInterval); // 50 итераций
+    const startTime = performance.now();
+    startTimeRef.current = startTime;
 
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    const animate = (now: number) => {
+      if (!startTimeRef.current) return;
+      const elapsed = now - startTimeRef.current;
+      const progress = Math.min(elapsed / spinDuration, 1);
 
-    intervalRef.current = window.setInterval(() => {
-      spins++;
-
-      if (spins < maxSpins) {
-        // Берём случайного, но гарантируем, что он не равен предыдущему (опционально)
-        let randomIndex;
-        do {
-          randomIndex = Math.floor(Math.random() * pool.length);
-        } while (pool.length > 1 && spinResult && pool[randomIndex].id === spinResult.id);
-        setSpinResult(pool[randomIndex]);
+      // Меняем отображаемого питомца каждые 50 мс
+      const frame = Math.floor(elapsed / 50);
+      if (progress < 1) {
+        // Если наступило время для нового кадра
+        if (frame !== Math.floor((elapsed - 16) / 50)) {
+          const randomIndex = Math.floor(Math.random() * pool.length);
+          setDisplayPet(pool[randomIndex]);
+        }
+        animationRef.current = requestAnimationFrame(animate);
       } else {
-        // Последний кадр — финальный питомец
-        setSpinResult(finalPetRef.current);
-        clearInterval(intervalRef.current);
-        intervalRef.current = undefined;
-
-        // Небольшая задержка, чтобы пользователь осознал результат
+        // Анимация завершена — показываем финального питомца
+        setDisplayPet(finalPetRef.current);
+        setIsSpinning(false);
+        // Даём 400 мс, чтобы пользователь увидел результат
         setTimeout(() => {
-          setIsSpinning(false);
           if (finalPetRef.current) {
             onComplete(finalPetRef.current);
             showDropNotification(finalPetRef.current);
           }
-        }, 300);
+        }, 400);
       }
-    }, spinInterval);
-  }, [isSpinning, starterCaseOpened, onComplete, showDropNotification, pool, spinResult]);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+  }, [isSpinning, starterCaseOpened, onComplete, showDropNotification, pool]);
 
   useEffect(() => {
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
   }, []);
 
@@ -452,17 +456,17 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
           transition={{ duration: 2, ease: 'easeOut' }}
         >
           <div className="wheel-display">
-            {spinResult ? (
+            {displayPet ? (
               <motion.div
-                key={spinResult.id + (isSpinning ? 'spin' : 'final')}
+                key={displayPet.id + (isSpinning ? 'spin' : 'final')}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 className="wheel-result"
-                style={{ background: `${RARITY_CONFIG[spinResult.rarity].color}30` }}
+                style={{ background: `${RARITY_CONFIG[displayPet.rarity].color}30` }}
               >
-                <span className="wheel-emoji">{spinResult.emoji}</span>
-                <div className="wheel-name">{spinResult.name}</div>
-                <div className="wheel-rarity">{RARITY_CONFIG[spinResult.rarity].name}</div>
+                <span className="wheel-emoji">{displayPet.emoji}</span>
+                <div className="wheel-name">{displayPet.name}</div>
+                <div className="wheel-rarity">{RARITY_CONFIG[displayPet.rarity].name}</div>
               </motion.div>
             ) : (
               <div className="wheel-placeholder">

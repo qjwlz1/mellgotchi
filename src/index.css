@@ -56,9 +56,12 @@ body {
 
 /* ==================== РУЛЕТКА (НАЧАЛЬНЫЙ КЕЙС) ==================== */
 .wheel-container {
+  display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  text-align: center;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .wheel-header {
@@ -82,26 +85,21 @@ body {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 24px;
 }
 
 .wheel-drum {
   width: 100%;
-  aspect-ratio: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 20px;
-  padding: 16px;
 }
 
 .wheel-display {
   width: 100%;
-  height: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
 }
 
 .wheel-result {
