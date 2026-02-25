@@ -156,8 +156,6 @@ body {
   margin: 0 auto;
 }
 
-/* Превью убрано */
-
 /* ==================== НАВИГАЦИОННАЯ ПАНЕЛЬ ==================== */
 .navbar {
   display: flex;
@@ -591,7 +589,7 @@ body {
 
 .cases-grid {
   display: grid;
-  grid-template-columns: 1fr; /* вертикальное расположение */
+  grid-template-columns: 1fr;
   gap: 16px;
   margin-top: 16px;
 }
@@ -646,35 +644,6 @@ body {
   cursor: not-allowed;
   filter: grayscale(1);
   pointer-events: none;
-}
-
-/* Превью убрано */
-
-/* ==================== ТАБЫ (для старых экранов, если используются) ==================== */
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin: 20px 0;
-  width: 100%;
-  max-width: 400px;
-}
-
-.tab {
-  flex: 1;
-  padding: 12px;
-  border: none;
-  border-radius: 30px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.tab.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
 }
 
 /* ==================== УВЕДОМЛЕНИЯ ==================== */
@@ -761,7 +730,7 @@ body {
   opacity: 0.7;
 }
 
-/* ==================== АНИМАЦИЯ ОТКРЫТИЯ КЕЙСА (ГОРИЗОНТАЛЬНАЯ ПРОКРУТКА) ==================== */
+/* ==================== АНИМАЦИЯ ОТКРЫТИЯ КЕЙСА ==================== */
 .case-opening-overlay {
   position: fixed;
   top: 0;
@@ -782,8 +751,8 @@ body {
   border-radius: 40px;
   padding: 20px;
   text-align: center;
-  max-width: 500px;
-  width: 90%;
+  max-width: min(500px, 90vw);
+  width: 100%;
   box-shadow: 0 0 50px rgba(255, 215, 0, 0.5);
   overflow: hidden;
 }
@@ -882,6 +851,27 @@ body {
 
   .collider-grid {
     grid-template-columns: 1fr !important;
+  }
+
+  /* Уменьшаем элементы карусели на маленьких экранах */
+  .case-opening-item {
+    width: 60px;
+    height: 60px;
+    font-size: 2rem;
+  }
+
+  .case-opening-item span {
+    font-size: 0.7rem;
+    max-width: 50px;
+  }
+
+  .case-opening-center {
+    width: 70px;
+    height: 70px;
+  }
+
+  .case-opening-track {
+    gap: 10px;
   }
 }
 

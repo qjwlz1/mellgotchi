@@ -97,32 +97,6 @@ const CASES: Case[] = [
   },
 ];
 
-// ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
-
-const getRandomRarity = (): RarityKey => {
-  const totalWeight = Object.values(RARITY_CONFIG).reduce((sum, { weight }) => sum + weight, 0);
-  let random = Math.random() * totalWeight;
-
-  for (const [rarity, { weight }] of Object.entries(RARITY_CONFIG)) {
-    if (random < weight) return rarity as RarityKey;
-    random -= weight;
-  }
-  return 'обычный';
-};
-
-const getRandomPetId = (pool: Pet[]): number => {
-  const rarity = getRandomRarity();
-  const petsOfRarity = pool.filter(p => p.rarity === rarity);
-  if (petsOfRarity.length === 0) {
-    return pool[Math.floor(Math.random() * pool.length)].id;
-  }
-  return petsOfRarity[Math.floor(Math.random() * petsOfRarity.length)].id;
-};
-
-const getPetById = (id: number): Pet | undefined => PETS_DATABASE.find(p => p.id === id);
-
-// ==================== КОМПОНЕНТ TOAST ====================
-
 interface ToastMessage {
   id: number;
   text: string;
@@ -217,11 +191,13 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
   const targetOffsetRef = useRef<number>(0);
   const startOffsetRef = useRef<number>(0);
 
-  const ITEM_WIDTH = 100; // ширина элемента + gap
+  const ITEM_WIDTH = 80; // ширина элемента + gap (из CSS)
 
   useEffect(() => {
-    const finalId = getRandomPetId(pool);
-    finalPetRef.current = getPetById(finalId) || pool[0];
+    // Выбираем финального питомца простым случайным образом из пула (без учёта редкости)
+    const finalPet = pool[Math.floor(Math.random() * pool.length)];
+    finalPetRef.current = finalPet;
+    console.log('[Case] Финальный питомец:', finalPet.name, 'ID:', finalPet.id);
 
     const repeatCount = 5;
     const baseItems = [];
@@ -372,7 +348,7 @@ function Navbar({ currentSection, onSectionChange }: NavbarProps) {
 }
 
 // ==================== КОМПОНЕНТ РУЛЕТКИ (НАЧАЛЬНЫЙ КЕЙС) ====================
-// ИСПРАВЛЕНО: теперь финальный питомец показывается на последнем кадре
+// Упрощённая логика: финальный питомец выбирается простым случайным образом из пула
 
 interface WheelScreenProps {
   onComplete: (pet: Pet) => void;
@@ -384,16 +360,14 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinResult, setSpinResult] = useState<Pet | null>(null);
   const intervalRef = useRef<number | undefined>(undefined);
-  const finalPetRef = useRef<Pet | null>(null); // финальный питомец, выбранный заранее
+  const finalPetRef = useRef<Pet | null>(null);
+  const pool = PETS_DATABASE.filter(p => [1, 2, 3, 9].includes(p.id));
 
   const spinWheel = useCallback(() => {
     if (isSpinning || starterCaseOpened) return;
 
-    // Определяем финального питомца ДО начала анимации
-    const pool = PETS_DATABASE.filter(p => [1, 2, 3, 9].includes(p.id));
-    const finalId = getRandomPetId(pool);
-    const finalPet = getPetById(finalId);
-    if (!finalPet) return;
+    // Простой случайный выбор финального питомца из пула
+    const finalPet = pool[Math.floor(Math.random() * pool.length)];
     finalPetRef.current = finalPet;
     console.log('[Wheel] Финальный питомец:', finalPet.name, 'ID:', finalPet.id);
 
@@ -408,13 +382,12 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
     if (intervalRef.current) clearInterval(intervalRef.current);
 
     intervalRef.current = window.setInterval(() => {
-      // Показываем случайных питомцев, но на последней итерации показываем финального
       if (spins < maxSpins - 1) {
-        const starterPets = PETS_DATABASE.filter(p => [1, 2, 3, 9].includes(p.id));
-        const randomIndex = Math.floor(Math.random() * starterPets.length);
-        setSpinResult(starterPets[randomIndex]);
+        // Показываем случайного питомца из пула (кроме последнего кадра)
+        const randomIndex = Math.floor(Math.random() * pool.length);
+        setSpinResult(pool[randomIndex]);
       } else {
-        // Последний кадр — показываем финального питомца
+        // Последний кадр — финальный питомец
         setSpinResult(finalPetRef.current);
       }
 
@@ -422,8 +395,6 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
       if (spins >= maxSpins) {
         clearInterval(intervalRef.current);
         intervalRef.current = undefined;
-
-        // Завершаем анимацию
         setIsSpinning(false);
         if (finalPetRef.current) {
           onComplete(finalPetRef.current);
@@ -431,7 +402,7 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
         }
       }
     }, spinInterval);
-  }, [isSpinning, starterCaseOpened, onComplete, showDropNotification]);
+  }, [isSpinning, starterCaseOpened, onComplete, showDropNotification, pool]);
 
   useEffect(() => {
     return () => {
@@ -488,6 +459,13 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
   );
 }
 
+// ==================== ОСТАЛЬНЫЕ КОМПОНЕНТЫ (GameScreen, CollectionScreen, ColliderScreen, ShopScreen) ====================
+// Они остаются без изменений (см. предыдущий ответ), но для краткости здесь не дублируются.
+// Вставьте сюда полные версии этих компонентов из предыдущего сообщения.
+// ...
+
+// ==================== ОСНОВНОЙ КОМПОНЕНТ App ====================
+// Он также остаётся без изменений (см. предыдущий ответ).
 // ==================== КОМПОНЕНТ ЭКРАНА ПИТОМЦА ====================
 
 interface GameScreenProps {
