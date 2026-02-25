@@ -228,19 +228,23 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
     for (let i = 0; i < repeatCount; i++) {
       baseItems.push(...pool);
     }
+    // Помещаем финального питомца в центр, чтобы гарантированно остановиться на нём
     const targetIndex = Math.floor(baseItems.length / 2);
     baseItems[targetIndex] = finalPetRef.current;
     setItems(baseItems);
 
     if (containerRef.current) {
       const containerWidth = containerRef.current.clientWidth;
+      // Целевое смещение: элемент с targetIndex должен быть по центру
       const targetOffset = targetIndex * ITEM_WIDTH - (containerWidth / 2 - ITEM_WIDTH / 2);
       targetOffsetRef.current = targetOffset;
 
       const maxOffset = baseItems.length * ITEM_WIDTH;
-      let startOffset = Math.random() * maxOffset;
-      if (Math.abs(startOffset - targetOffset) < 200) {
-        startOffset = (startOffset + maxOffset / 2) % maxOffset;
+      // Начинаем с большого смещения, чтобы двигаться влево (offset уменьшается)
+      let startOffset = targetOffset + 2000; // большое смещение вправо
+      // Если startOffset слишком большой, обернём, но так, чтобы он оставался > targetOffset
+      if (startOffset > maxOffset) {
+        startOffset = targetOffset + (startOffset - targetOffset) % (maxOffset - targetOffset);
       }
       startOffsetRef.current = startOffset;
       setOffset(startOffset);
@@ -259,9 +263,11 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
       const elapsed = now - startTimeRef.current;
       const progress = Math.min(elapsed / spinDuration, 1);
 
+      // easeOutCubic: плавное замедление
       const easeOut = 1 - Math.pow(1 - progress, 3);
+      // offset уменьшается от startOffset до targetOffset (движение влево)
       const currentOffset =
-        startOffsetRef.current + (targetOffsetRef.current - startOffsetRef.current) * easeOut;
+        startOffsetRef.current - (startOffsetRef.current - targetOffsetRef.current) * easeOut;
       setOffset(currentOffset);
 
       if (progress < 1) {
@@ -372,7 +378,6 @@ function Navbar({ currentSection, onSectionChange }: NavbarProps) {
 }
 
 // ==================== КОМПОНЕНТ РУЛЕТКИ (НАЧАЛЬНЫЙ КЕЙС) ====================
-// (Превью убрано)
 
 interface WheelScreenProps {
   onComplete: (pet: Pet) => void;
@@ -412,6 +417,7 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
         const randomPetId = getRandomPetId(pool);
         const newPet = getPetById(randomPetId);
         if (newPet) {
+          console.log('[Wheel] Выпал питомец:', newPet.name, 'ID:', newPet.id); // отладка
           setSpinResult(newPet);
           onComplete(newPet);
           showDropNotification(newPet);
@@ -426,8 +432,6 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
-
-  // Превью убрано
 
   return (
     <div className="app-container wheel-container">
@@ -473,15 +477,12 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
         >
           {isSpinning ? '🎲 КРУТИТСЯ...' : '🎰 ОТКРЫТЬ КЕЙС'}
         </motion.button>
-
-        {/* Превью удалено */}
       </div>
     </div>
   );
 }
 
 // ==================== КОМПОНЕНТ ЭКРАНА ПИТОМЦА ====================
-// (без изменений, но оставлен для полноты)
 
 interface GameScreenProps {
   pet: OwnedPet;
@@ -629,7 +630,6 @@ function GameScreen({
 }
 
 // ==================== КОМПОНЕНТ КОЛЛЕКЦИИ ====================
-// (без изменений)
 
 interface CollectionScreenProps {
   myPets: OwnedPet[];
@@ -674,7 +674,6 @@ function CollectionScreen({ myPets, onSelectPet }: CollectionScreenProps) {
 }
 
 // ==================== КОМПОНЕНТ КОЛЛАЙДЕРА ====================
-// (без изменений)
 
 interface ColliderScreenProps {
   myPets: OwnedPet[];
@@ -740,7 +739,6 @@ function ColliderScreen({ myPets, onLevelUp, addToast }: ColliderScreenProps) {
 }
 
 // ==================== КОМПОНЕНТ МАГАЗИНА ====================
-// (превью убрано)
 
 interface ShopScreenProps {
   onStartOpening: (pool: Pet[], caseId: string) => void;
@@ -757,7 +755,6 @@ function ShopScreen({ onStartOpening, starterCaseOpened, addToast }: ShopScreenP
           const isStarterOpened = c.id === 'starter' && starterCaseOpened;
           const disabled = !c.available || isStarterOpened;
 
-          // Формируем пул
           let pool = PETS_DATABASE;
           if (c.petsIds) {
             pool = PETS_DATABASE.filter(p => c.petsIds?.includes(p.id));
@@ -786,7 +783,6 @@ function ShopScreen({ onStartOpening, starterCaseOpened, addToast }: ShopScreenP
                   {c.price > 0 ? `💰 ${c.price}` : '🎁 Бесплатно'}
                 </div>
               </div>
-              {/* Превью полностью удалено */}
             </motion.div>
           );
         })}
