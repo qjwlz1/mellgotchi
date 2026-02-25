@@ -190,7 +190,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
   const finalPetRef = useRef<Pet | null>(null);
   const targetOffsetRef = useRef<number>(0);
   const startOffsetRef = useRef<number>(0);
-  const completedRef = useRef(false); // FIX: защита от повторного onComplete
+  const completedRef = useRef(false); // защита от повторного onComplete
 
   const ITEM_WIDTH = 80;
 
@@ -244,7 +244,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
         animationRef.current = requestAnimationFrame(animate);
       } else {
         setIsSpinning(false);
-        // FIX: вызываем onComplete только один раз, не закрывая окно
+        // вызываем onComplete только один раз, не закрывая окно
         if (finalPetRef.current && !completedRef.current) {
           completedRef.current = true;
           onComplete(finalPetRef.current);
@@ -259,7 +259,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
     };
   }, [items, onComplete]);
 
-  // FIX: закрытие только после окончания анимации
+  // закрытие только после окончания анимации
   const handleOverlayClick = () => {
     if (!isSpinning) {
       onClose();
@@ -367,14 +367,12 @@ interface WheelScreenProps {
 function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: WheelScreenProps) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinResult, setSpinResult] = useState<Pet | null>(null);
-  const [completed, setCompleted] = useState(false); // FIX: фаза показа результата
   const intervalRef = useRef<number | undefined>(undefined);
-  const finalTimerRef = useRef<number | undefined>(undefined); // FIX: таймер перед onComplete
   const finalPetRef = useRef<Pet | null>(null);
   const pool = PETS_DATABASE.filter(p => [1, 2, 3, 9].includes(p.id));
 
   const spinWheel = useCallback(() => {
-    if (isSpinning || starterCaseOpened || completed) return;
+    if (isSpinning || starterCaseOpened) return;
 
     const finalPet = pool[Math.floor(Math.random() * pool.length)];
     finalPetRef.current = finalPet;
@@ -382,7 +380,6 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
 
     setIsSpinning(true);
     setSpinResult(null);
-    setCompleted(false);
 
     const spinDuration = 2000;
     const spinInterval = 50;
@@ -404,23 +401,18 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
         clearInterval(intervalRef.current);
         intervalRef.current = undefined;
         setIsSpinning(false);
-        setCompleted(true); // FIX: переходим в режим показа результата
-
-        // FIX: даём пользователю 1.5 секунды посмотреть результат, затем завершаем
-        finalTimerRef.current = window.setTimeout(() => {
-          if (finalPetRef.current) {
-            onComplete(finalPetRef.current);
-            showDropNotification(finalPetRef.current);
-          }
-        }, 1500);
+        // Сразу завершаем – экран закроется, питомец добавится
+        if (finalPetRef.current) {
+          onComplete(finalPetRef.current);
+          showDropNotification(finalPetRef.current);
+        }
       }
     }, spinInterval);
-  }, [isSpinning, starterCaseOpened, completed, onComplete, showDropNotification, pool]);
+  }, [isSpinning, starterCaseOpened, onComplete, showDropNotification, pool]);
 
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      if (finalTimerRef.current) clearTimeout(finalTimerRef.current);
     };
   }, []);
 
@@ -464,17 +456,16 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: Wh
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={spinWheel}
-          disabled={isSpinning || completed} // FIX: блокируем во время показа результата
+          disabled={isSpinning}
         >
-          {isSpinning ? '🎲 КРУТИТСЯ...' : completed ? '🎉 ГОТОВО!' : '🎰 ОТКРЫТЬ КЕЙС'}
+          {isSpinning ? '🎲 КРУТИТСЯ...' : '🎰 ОТКРЫТЬ КЕЙС'}
         </motion.button>
       </div>
     </div>
   );
 }
 
-// ==================== ОСТАЛЬНЫЕ КОМПОНЕНТЫ (GameScreen, CollectionScreen, ColliderScreen, ShopScreen) ====================
-// (Остаются без изменений, кроме ShopScreen – но там только JSX, правки в CSS)
+// ==================== ЭКРАН ПИТОМЦА ====================
 
 interface GameScreenProps {
   pet: OwnedPet;
@@ -621,7 +612,7 @@ function GameScreen({
   );
 }
 
-// ==================== КОМПОНЕНТ КОЛЛЕКЦИИ ====================
+// ==================== КОЛЛЕКЦИЯ ====================
 
 interface CollectionScreenProps {
   myPets: OwnedPet[];
@@ -665,7 +656,7 @@ function CollectionScreen({ myPets, onSelectPet }: CollectionScreenProps) {
   );
 }
 
-// ==================== КОМПОНЕНТ КОЛЛАЙДЕРА ====================
+// ==================== КОЛЛАЙДЕР ====================
 
 interface ColliderScreenProps {
   myPets: OwnedPet[];
@@ -730,7 +721,7 @@ function ColliderScreen({ myPets, onLevelUp, addToast }: ColliderScreenProps) {
   );
 }
 
-// ==================== КОМПОНЕНТ МАГАЗИНА ====================
+// ==================== МАГАЗИН ====================
 
 interface ShopScreenProps {
   onStartOpening: (pool: Pet[], caseId: string) => void;
@@ -846,7 +837,6 @@ function App() {
     addToast(event.msg);
   }, [addToast]);
 
-  // FIX: теперь onComplete вызывается после остановки анимации, но окно остаётся открытым
   const handleCaseOpenComplete = useCallback(
     (pet: Pet, caseId: string) => {
       addPetToCollection(pet);
@@ -854,7 +844,7 @@ function App() {
       if (caseId === 'starter') {
         setStarterCaseOpened(true);
       }
-      // НЕ закрываем openingCase здесь – окно закроется по клику
+      // окно остаётся открытым до клика
     },
     [addPetToCollection, showDropNotification]
   );
