@@ -179,68 +179,84 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
   const animationRef = useRef<number | null>(null);
   const finalPetRef = useRef<Pet | null>(null);
   const completedRef = useRef(false);
+  const finalIndexRef = useRef<number>(-1);
 
-  // Генерация ленты + выбор финального (один раз)
+  // Генерация ленты + выбор финального
   useEffect(() => {
     const finalPet = pool[Math.floor(Math.random() * pool.length)];
     finalPetRef.current = finalPet;
 
-    const repeatCount = 8; // больше повторений = плавнее
+    const repeatCount = 8;
     const generated: Pet[] = [];
     for (let i = 0; i < repeatCount; i++) {
       generated.push(...pool);
     }
 
-    // Финальный строго в центре (индекс должен быть чётко посередине)
+    // Финальный в центре
     const middleIndex = Math.floor(generated.length / 2);
     generated[middleIndex] = finalPet;
+    finalIndexRef.current = middleIndex;
 
     setItems(generated);
   }, [pool]);
 
-  // Анимация + точная остановка
+  // Анимация с точным позиционированием по реальному DOM
   useEffect(() => {
-    if (!containerRef.current || !trackRef.current || items.length === 0) return;
+    if (!containerRef.current || !trackRef.current || items.length === 0 || finalIndexRef.current === -1) return;
 
-    const containerWidth = containerRef.current.clientWidth;
-    const itemWidth = 80 + 20; // ширина item + gap
-    const middleIndex = Math.floor(items.length / 2);
-    const targetOffset = middleIndex * itemWidth - (containerWidth / 2 - itemWidth / 2);
+    // Ждём, пока элементы отрендерятся
+    const timeout = setTimeout(() => {
+      const container = containerRef.current!;
+      const track = trackRef.current!;
+      const children = track.children;
 
-    const startOffset = targetOffset + containerWidth * 3; // больше расстояния = дольше крутится
-    const duration = 3000; // 3 секунды
+      if (children.length === 0) return;
 
-    let startTime: number | null = null;
+      const finalItem = children[finalIndexRef.current] as HTMLElement;
+      if (!finalItem) return;
 
-    const animate = (now: number) => {
-      if (!startTime) startTime = now;
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 4); // более резкий стоп
+      // Реальная позиция финального элемента относительно трека
+      const itemLeft = finalItem.offsetLeft;
+      const itemWidth = finalItem.offsetWidth;
+      const containerWidth = container.clientWidth;
 
-      const currentOffset = startOffset - (startOffset - targetOffset) * easeOut;
-      setOffset(currentOffset);
+      // Целевое смещение — центрируем финальный элемент
+      const targetOffset = itemLeft - (containerWidth / 2 - itemWidth / 2);
 
-      if (progress < 1) {
-        animationRef.current = requestAnimationFrame(animate);
-      } else {
-        // Точная остановка на пиксельном уровне
-        setOffset(targetOffset);
-        setIsSpinning(false);
+      const startOffset = targetOffset + containerWidth * 3; // разгон
+      const duration = 3000;
 
-        if (!completedRef.current && finalPetRef.current) {
-          completedRef.current = true;
-          onComplete(finalPetRef.current);
+      let startTime: number | null = null;
+
+      const animate = (now: number) => {
+        if (!startTime) startTime = now;
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 4);
+
+        const currentOffset = startOffset - (startOffset - targetOffset) * easeOut;
+        setOffset(currentOffset);
+
+        if (progress < 1) {
+          animationRef.current = requestAnimationFrame(animate);
+        } else {
+          setOffset(targetOffset);
+          setIsSpinning(false);
+
+          if (!completedRef.current && finalPetRef.current) {
+            completedRef.current = true;
+            onComplete(finalPetRef.current);
+          }
+
+          setTimeout(() => onClose(), 1500);
         }
+      };
 
-        // Автозакрытие через 1.5 сек после полной остановки
-        setTimeout(() => onClose(), 1500);
-      }
-    };
-
-    animationRef.current = requestAnimationFrame(animate);
+      animationRef.current = requestAnimationFrame(animate);
+    }, 100); // даём 100 мс на рендер элементов
 
     return () => {
+      clearTimeout(timeout);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
   }, [items, onComplete, onClose]);
