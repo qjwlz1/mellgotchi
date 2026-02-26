@@ -844,7 +844,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999; /* выше всего */
+  z-index: 9999;
   overflow: hidden;
 }
 
@@ -886,7 +886,7 @@ body {
   gap: 20px;
   height: 100%;
   align-items: center;
-  transition: all 0.3s ease;
+  will-change: transform; /* оптимизация анимации */
 }
 
 .case-opening-item {
@@ -901,6 +901,7 @@ body {
   justify-content: center;
   padding: 10px;
   box-shadow: 0 0 15px rgba(0,0,0,0.6);
+  transition: box-shadow 0.5s ease;
 }
 
 .case-opening-emoji {
@@ -917,7 +918,7 @@ body {
   white-space: nowrap;
 }
 
-/* Фиксированная направляющая (стрелка в центре) */
+/* Фиксированная направляющая (рамка в центре) */
 .case-opening-pointer {
   position: absolute;
   top: 50%;

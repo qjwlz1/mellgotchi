@@ -173,77 +173,84 @@ interface CaseOpeningAnimationProps {
 function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimationProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState<Pet[]>([]);
+  const [translateX, setTranslateX] = useState(0);
   const [isSpinning, setIsSpinning] = useState(true);
   const finalPetRef = useRef<Pet | null>(null);
   const finalIndexRef = useRef<number>(-1);
+  const animationFrameRef = useRef<number | null>(null);
   const completedRef = useRef(false);
 
-  // Генерация новой ленты каждый раз
+  // Генерация ленты + выбор финального
   useEffect(() => {
     const finalPet = pool[Math.floor(Math.random() * pool.length)];
     finalPetRef.current = finalPet;
 
-    const repeatCount = 15; // ещё длиннее для ощущения скорости
+    const repeatCount = 12;
     const generated: Pet[] = [];
     for (let i = 0; i < repeatCount; i++) {
       generated.push(...pool);
     }
 
-    // Финальный предмет ближе к концу ленты (80%)
-    const finalIndex = Math.floor(generated.length * 0.8);
+    // Финальный предмет ближе к концу
+    const finalIndex = Math.floor(generated.length * 0.78);
     generated[finalIndex] = finalPet;
     finalIndexRef.current = finalIndex;
 
     setItems(generated);
-    setIsSpinning(true); // всегда заново запускаем анимацию
+    setTranslateX(0); // сброс позиции
+    setIsSpinning(true);
   }, [pool]);
 
-  // Управление прокруткой
+  // Анимация прокрутки
   useEffect(() => {
     if (!trackRef.current || items.length === 0 || finalIndexRef.current === -1) return;
 
     const track = trackRef.current;
-    const finalItem = track.children[finalIndexRef.current] as HTMLElement;
+    const itemWidth = 100 + 20; // ширина item + gap
+    const finalOffset = finalIndexRef.current * itemWidth;
+    const containerWidth = track.clientWidth;
+    const targetTranslate = finalOffset - (containerWidth / 2 - itemWidth / 2);
 
-    if (!finalItem) return;
+    // Стартовое положение — далеко слева
+    const startTranslate = targetTranslate + containerWidth * 4; // большой разгон
 
-    // Сбрасываем позицию прокрутки перед стартом
-    track.scrollLeft = 0;
+    let startTime: number | null = null;
+    const duration = 3200; // 3.2 секунды
 
-    const timer = setTimeout(() => {
-      // Быстрый старт — прокручиваем почти до финала
-      track.scrollTo({
-        left: finalItem.offsetLeft - track.clientWidth * 0.6,
-        behavior: 'instant',
-      });
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
 
-      // Плавная прокрутка к центру финального предмета
-      setTimeout(() => {
-        finalItem.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'center',
-        });
+      // Ease-out cubic — быстро в начале, медленно в конце
+      const ease = 1 - Math.pow(1 - progress, 3);
+      const currentTranslate = startTranslate - (startTranslate - targetTranslate) * ease;
 
-        // Остановка анимации
+      setTranslateX(currentTranslate);
+
+      if (progress < 1) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      } else {
+        setTranslateX(targetTranslate);
+        setIsSpinning(false);
+
+        if (!completedRef.current && finalPetRef.current) {
+          completedRef.current = true;
+          onComplete(finalPetRef.current);
+        }
+
         setTimeout(() => {
-          setIsSpinning(false);
+          onClose();
+          document.body.style.overflow = '';
+        }, 1800);
+      }
+    };
 
-          if (!completedRef.current && finalPetRef.current) {
-            completedRef.current = true;
-            onComplete(finalPetRef.current);
-          }
+    animationFrameRef.current = requestAnimationFrame(animate);
 
-          // Закрытие окна через 1.8 сек после остановки
-          setTimeout(() => {
-            onClose();
-            document.body.style.overflow = '';
-          }, 1800);
-        }, 3200); // время полной прокрутки
-      }, 400);
-    }, 100);
-
-    return () => clearTimeout(timer);
+    return () => {
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    };
   }, [items, onComplete, onClose]);
 
   return (
@@ -262,24 +269,22 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
             <div
               ref={trackRef}
               className="case-opening-track"
+              style={{ transform: `translateX(-${translateX}px)` }}
             >
               {items.map((pet, idx) => (
-                <motion.div
+                <div
                   key={`${pet.id}-${idx}`}
                   className="case-opening-item"
                   style={{
                     borderColor: RARITY_CONFIG[pet.rarity].color,
+                    boxShadow: !isSpinning && pet.id === finalPetRef.current?.id
+                      ? '0 0 40px gold, inset 0 0 20px gold'
+                      : 'none',
                   }}
-                  animate={
-                    !isSpinning && pet.id === finalPetRef.current?.id
-                      ? { scale: [1, 1.4, 1], rotate: [0, 10, -10, 0] }
-                      : {}
-                  }
-                  transition={{ duration: 0.8, ease: 'backOut' }}
                 >
                   <div className="case-opening-emoji">{pet.emoji}</div>
                   <span className="case-opening-name">{pet.name}</span>
-                </motion.div>
+                </div>
               ))}
             </div>
 
