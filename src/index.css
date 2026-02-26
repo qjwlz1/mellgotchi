@@ -96,10 +96,11 @@ body {
   align-items: center;
 }
 
-.wheel-display {
+.wheel-result {
   width: 100%;
-  display: flex;
-  justify-content: center;
+  max-width: 300px; /* ограничиваем ширину, чтобы не расползалось */
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .wheel-result {
