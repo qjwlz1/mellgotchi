@@ -919,15 +919,15 @@ body {
 }
 
 .case-opening-item.winner {
-  transform: scale(1.4);
-  box-shadow: 0 0 60px gold, inset 0 0 30px gold;
+  transform: scale(1.45);
+  box-shadow: 0 0 70px gold, inset 0 0 35px gold;
   z-index: 5;
-  animation: winnerPulse 1.8s infinite alternate;
+  animation: winnerPulse 1.6s infinite alternate;
 }
 
 @keyframes winnerPulse {
-  from { transform: scale(1.4); }
-  to { transform: scale(1.5); }
+  from { transform: scale(1.45); }
+  to { transform: scale(1.55); }
 }
 
 .case-opening-pointer {
@@ -940,8 +940,8 @@ body {
   border: 5px solid var(--accent-gold);
   border-radius: 28px;
   pointer-events: none;
-  box-shadow: 0 0 60px var(--accent-gold);
-  background: rgba(255,215,0,0.08);
+  box-shadow: 0 0 70px var(--accent-gold);
+  background: rgba(255,215,0,0.1);
   z-index: 10;
 }
 
