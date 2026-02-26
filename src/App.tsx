@@ -179,6 +179,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
   const finalIndexRef = useRef<number>(-1);
   const animationFrameRef = useRef<number | null>(null);
   const completedRef = useRef(false);
+  const animationCompleteRef = useRef(false); // флаг завершения
 
   // Генерация ленты
   useEffect(() => {
@@ -199,15 +200,15 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
     setTranslateX(0);
     setIsSpinning(true);
     completedRef.current = false;
+    animationCompleteRef.current = false;
   }, [pool]);
 
-  // Одна анимация
+  // Одна анимация прокрутки
   useEffect(() => {
-    if (!trackRef.current || items.length === 0 || finalIndexRef.current === -1) return;
+    if (!trackRef.current || items.length === 0 || finalIndexRef.current === -1 || animationCompleteRef.current) return;
 
     const track = trackRef.current;
 
-    // Ждём рендера и измеряем реальные размеры
     const measureTimer = setTimeout(() => {
       const finalItem = track.children[finalIndexRef.current] as HTMLElement;
       if (!finalItem) return;
@@ -217,17 +218,16 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
       const itemWidth = finalItem.offsetWidth;
 
       const targetTranslate = itemLeft - (containerWidth / 2 - itemWidth / 2);
-      const startTranslate = targetTranslate + containerWidth * 6; // сильный разгон
+      const startTranslate = targetTranslate + containerWidth * 6;
 
       let startTime: number | null = null;
-      const duration = 3400; // 3.4 секунды — идеально для драмы
+      const duration = 3400;
 
       const animate = (timestamp: number) => {
         if (!startTime) startTime = timestamp;
         const elapsed = timestamp - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        // Ease-out expo — супер быстро → почти мгновенно замедляется
         const ease = 1 - Math.pow(2, -12 * progress);
         const currentTranslate = startTranslate - (startTranslate - targetTranslate) * ease;
 
@@ -236,7 +236,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
         if (progress < 1) {
           animationFrameRef.current = requestAnimationFrame(animate);
         } else {
-          // Остановка
+          animationCompleteRef.current = true; // фиксируем завершение
           setTranslateX(targetTranslate);
           setIsSpinning(false);
 
@@ -245,11 +245,11 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
             onComplete(finalPetRef.current);
           }
 
-          // Закрытие через 1.8 секунды — без повторных движений
+          // Закрытие через 1.8 секунды — без повторных вызовов
           setTimeout(() => {
             onClose();
             document.body.style.overflow = '';
-          }, 1800);
+          }, 1000);
         }
       };
 
