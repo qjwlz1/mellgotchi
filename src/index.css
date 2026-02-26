@@ -919,9 +919,15 @@ body {
 }
 
 .case-opening-item.winner {
-  transform: scale(1.3);
-  box-shadow: 0 0 40px gold, inset 0 0 20px gold;
+  transform: scale(1.35);
+  box-shadow: 0 0 50px gold, inset 0 0 25px gold;
   z-index: 5;
+  animation: winnerPulse 1.5s infinite alternate;
+}
+
+@keyframes winnerPulse {
+  from { transform: scale(1.35); }
+  to { transform: scale(1.45); }
 }
 .case-opening-pointer {
   position: absolute;
