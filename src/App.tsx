@@ -178,26 +178,26 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
   const finalIndexRef = useRef<number>(-1);
   const completedRef = useRef(false);
 
-  // Генерация длинной ленты + выбор финального
+  // Генерация ленты
   useEffect(() => {
     const finalPet = pool[Math.floor(Math.random() * pool.length)];
     finalPetRef.current = finalPet;
 
-    const repeatCount = 12; // очень длинная лента для скорости
+    const repeatCount = 12;
     const generated: Pet[] = [];
     for (let i = 0; i < repeatCount; i++) {
       generated.push(...pool);
     }
 
-    // Финальный элемент размещаем ближе к концу (чтобы было ощущение долгой прокрутки)
-    const finalIndex = generated.length - Math.floor(generated.length / 4); // примерно 75% ленты
+    // Финальный ближе к концу (75–80% ленты)
+    const finalIndex = Math.floor(generated.length * 0.78);
     generated[finalIndex] = finalPet;
     finalIndexRef.current = finalIndex;
 
     setItems(generated);
   }, [pool]);
 
-  // Прокрутка + точная остановка
+  // Запуск анимации прокрутки
   useEffect(() => {
     if (!trackRef.current || items.length === 0 || finalIndexRef.current === -1) return;
 
@@ -207,13 +207,13 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
     if (!finalItem) return;
 
     const timer = setTimeout(() => {
-      // Сначала прокручиваем быстро до почти финала
+      // Быстрый старт — сразу почти до конца
       track.scrollTo({
-        left: finalItem.offsetLeft - track.clientWidth * 0.8,
+        left: finalItem.offsetLeft - track.clientWidth * 0.7,
         behavior: 'instant',
       });
 
-      // Запускаем плавную прокрутку к финальному
+      // Плавная прокрутка к финалу
       setTimeout(() => {
         finalItem.scrollIntoView({
           behavior: 'smooth',
@@ -221,7 +221,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
           inline: 'center',
         });
 
-        // Резкий стоп через 3 секунды
+        // Остановка через 3 секунды
         setTimeout(() => {
           setIsSpinning(false);
 
@@ -230,47 +230,32 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
             onComplete(finalPetRef.current);
           }
 
-          setTimeout(onClose, 1800);
+          setTimeout(() => {
+            onClose();
+            document.body.style.overflow = ''; // возвращаем скролл
+          }, 1800);
         }, 3000);
-      }, 200);
-    }, 100); // ждём рендера
+      }, 300);
+    }, 100);
 
     return () => clearTimeout(timer);
   }, [items, onComplete, onClose]);
 
   return (
-    <motion.div
-      className="case-opening-overlay"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={() => !isSpinning && onClose()}
-    >
+    <div className="case-opening-overlay">
       <motion.div
         className="case-opening-content"
-        initial={{ scale: 0.8 }}
-        animate={{ scale: 1 }}
-        transition={{ type: 'spring', bounce: 0.3 }}
-        onClick={e => e.stopPropagation()}
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.8, opacity: 0 }}
+        transition={{ duration: 0.4 }}
       >
-        <div className="case-opening-header">🎲 КЕЙС ОТКРЫВАЕТСЯ...</div>
+        <div className="case-opening-header">🎲 ОТКРЫТИЕ КЕЙСА...</div>
 
         <div className="case-opening-carousel">
           <div
             ref={trackRef}
             className="case-opening-track"
-            style={{
-              display: 'flex',
-              overflowX: 'hidden',
-              scrollSnapType: 'x mandatory',
-              scrollBehavior: 'smooth',
-              gap: '24px',
-              padding: '0 50vw',
-              margin: '0 -50vw',
-              width: '100vw',
-              height: '140px',
-              alignItems: 'center',
-            }}
           >
             {items.map((pet, idx) => (
               <motion.div
@@ -278,34 +263,28 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
                 className="case-opening-item"
                 style={{
                   borderColor: RARITY_CONFIG[pet.rarity].color,
-                  flex: '0 0 100px',
-                  scrollSnapAlign: 'center',
-                  boxShadow: pet.id === finalPetRef.current?.id && !isSpinning 
-                    ? '0 0 60px gold' 
-                    : '0 0 20px rgba(0,0,0,0.5)',
                 }}
                 animate={
                   !isSpinning && pet.id === finalPetRef.current?.id
-                    ? { scale: [1, 1.4, 1], rotate: [0, 10, -10, 0] }
+                    ? { scale: [1, 1.35, 1], rotate: [0, 8, -8, 0] }
                     : {}
                 }
                 transition={{ duration: 0.8, ease: 'backOut' }}
               >
-                <div style={{ fontSize: '4rem' }}>{pet.emoji}</div>
-                <span style={{ fontSize: '0.9rem', marginTop: '8px' }}>{pet.name}</span>
+                <div className="case-opening-emoji">{pet.emoji}</div>
+                <span className="case-opening-name">{pet.name}</span>
               </motion.div>
             ))}
           </div>
 
-          {/* Стрелка/центр для визуальной фиксации */}
-          <div className="case-opening-center" />
+          <div className="case-opening-center-marker" />
         </div>
 
         <div className="case-opening-hint">
           {isSpinning ? 'КРУТИТСЯ НА МАКСИМУМЕ...' : `ВЫПАЛ: ${finalPetRef.current?.name.toUpperCase()}`}
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -350,7 +329,6 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: {
 
     const finalPet = pool[Math.floor(Math.random() * pool.length)];
     finalPetRef.current = finalPet;
-    console.log('[Wheel] Выпал:', finalPet.name);
 
     setIsSpinning(true);
     setDisplayPet(null);
@@ -398,7 +376,7 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: {
       <div className="wheel-content">
         <motion.div
           className="wheel-drum"
-          animate={isSpinning ? { rotate: [0, 360 * 4], scale: [1, 1.05, 1, 1.03, 1] } : {}}
+          animate={isSpinning ? { rotate: [0, 360 * 5], scale: [1, 1.1, 1] } : {}}
           transition={{ duration: 2.5, ease: 'easeOut' }}
         >
           <div className="wheel-display">
@@ -409,11 +387,11 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: {
                   initial={{ scale: 0.6, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.6, opacity: 0 }}
-                  transition={{ duration: 0.25, type: 'spring', stiffness: 300 }}
+                  transition={{ duration: 0.25, type: 'spring' }}
                   className="wheel-result"
                   style={{
                     background: `${RARITY_CONFIG[displayPet.rarity].color}30`,
-                    border: isSpinning ? 'none' : `2px solid ${RARITY_CONFIG[displayPet.rarity].color}`,
+                    border: isSpinning ? 'none' : `3px solid ${RARITY_CONFIG[displayPet.rarity].color}`,
                   }}
                 >
                   <span className="wheel-emoji">{displayPet.emoji}</span>
@@ -609,7 +587,9 @@ function ColliderScreen({ myPets, onLevelUp, addToast }: {
   return (
     <div className="collider-screen">
       <h2>⚡ Коллайдер питомцев</h2>
-      <p className="collider-description">Объединяй 2 дубликата одного питомца, чтобы повысить его уровень!</p>
+      <p className="collider-description">
+        Объединяй 2 дубликата одного питомца, чтобы повысить его уровень!
+      </p>
 
       {upgradablePets.length === 0 ? (
         <p className="no-pets">😢 У вас пока нет питомцев с дубликатами</p>
@@ -641,8 +621,11 @@ function ColliderScreen({ myPets, onLevelUp, addToast }: {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => {
-                    if (pet.count >= 2) onLevelUp(pet.id);
-                    else addToast('😢 Недостаточно дубликатов');
+                    if (pet.count >= 2) {
+                      onLevelUp(pet.id);
+                    } else {
+                      addToast('😢 Недостаточно дубликатов');
+                    }
                   }}
                 >
                   ⬆️ Повысить уровень (2 шт.)
@@ -669,7 +652,6 @@ function ShopScreen({ onStartOpening, starterCaseOpened, addToast }: {
         {CASES.map(c => {
           const isStarterOpened = c.id === 'starter' && starterCaseOpened;
           const disabled = !c.available || isStarterOpened;
-
           let pool = PETS_DATABASE;
           if (c.petsIds) {
             pool = PETS_DATABASE.filter(p => c.petsIds?.includes(p.id));
@@ -773,8 +755,8 @@ function App() {
     if (!selectedPet || specialCooldown) return;
     setSpecialCooldown(true);
     setTimeout(() => setSpecialCooldown(false), 60000);
-    // ... остальной код способности без изменений
-  }, [selectedPet, specialCooldown, addToast]);
+    // ... логика способности (оставь свою)
+  }, [selectedPet, specialCooldown]);
 
   const levelUpPet = useCallback((petId: number) => {
     setMyPets(prev => {
@@ -858,47 +840,52 @@ function App() {
   }, []);
 
   const handleStartOpening = useCallback((pool: Pet[], caseId: string) => {
+    window.scrollTo(0, 0);
+    document.body.style.overflow = 'hidden';
     setOpeningCase({ pool, caseId });
   }, []);
 
-  const handleCloseOpening = useCallback(() => setOpeningCase(null), []);
+  const handleCloseOpening = useCallback(() => {
+    setOpeningCase(null);
+    document.body.style.overflow = '';
+  }, []);
 
   if (!selectedPet && !starterCaseOpened) {
     return <WheelScreen onComplete={handleWheelComplete} starterCaseOpened={starterCaseOpened} showDropNotification={showDropNotification} />;
   }
 
   return (
-    <div className="app-container">
-      <Navbar currentSection={currentSection} onSectionChange={setCurrentSection} />
+    <>
+      <div className="app-container">
+        <Navbar currentSection={currentSection} onSectionChange={setCurrentSection} />
 
-      {currentSection === 'pet' && selectedPet && (
-        <GameScreen
-          pet={selectedPet}
-          omaygad={omaygad}
-          level={level}
-          xp={xp}
-          murkocoin={murkocoin}
-          feedCount={feedCount}
-          inventory={inventory}
-          specialCooldown={specialCooldown}
-          onFeed={feedPet}
-          onUseAbility={useSpecialAbility}
-          onShowHelp={() => addToast(`Как играть:\n📦 Кейсы\n🍔 Кормить\n⚡ Способности\n🎁 Ежедневка\n💰 Муркокоины\n⚡ Коллайдер`)}
-        />
-      )}
+        {currentSection === 'pet' && selectedPet && (
+          <GameScreen
+            pet={selectedPet}
+            omaygad={omaygad}
+            level={level}
+            xp={xp}
+            murkocoin={murkocoin}
+            feedCount={feedCount}
+            inventory={inventory}
+            specialCooldown={specialCooldown}
+            onFeed={feedPet}
+            onUseAbility={useSpecialAbility}
+            onShowHelp={() => addToast(`Как играть:\n📦 Кейсы\n🍔 Кормить\n⚡ Способности\n🎁 Ежедневка\n💰 Муркокоины\n⚡ Коллайдер`)}
+          />
+        )}
 
-      {currentSection === 'collection' && <CollectionScreen myPets={myPets} onSelectPet={handleSelectPet} />}
-      {currentSection === 'collider' && <ColliderScreen myPets={myPets} onLevelUp={levelUpPet} addToast={addToast} />}
-      {currentSection === 'shop' && (
-        <ShopScreen
-          onStartOpening={handleStartOpening}
-          starterCaseOpened={starterCaseOpened}
-          addToast={addToast}
-        />
-      )}
+        {currentSection === 'collection' && <CollectionScreen myPets={myPets} onSelectPet={handleSelectPet} />}
+        {currentSection === 'collider' && <ColliderScreen myPets={myPets} onLevelUp={levelUpPet} addToast={addToast} />}
+        {currentSection === 'shop' && <ShopScreen onStartOpening={handleStartOpening} starterCaseOpened={starterCaseOpened} addToast={addToast} />}
 
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-      <AnimatePresence>{droppedPet && <DropNotification pet={droppedPet} onClose={() => setDroppedPet(null)} />}</AnimatePresence>
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
+
+        <AnimatePresence>
+          {droppedPet && <DropNotification pet={droppedPet} onClose={() => setDroppedPet(null)} />}
+        </AnimatePresence>
+      </div>
+
       <AnimatePresence>
         {openingCase && (
           <CaseOpeningAnimation
@@ -908,7 +895,7 @@ function App() {
           />
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
 
