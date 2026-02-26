@@ -196,17 +196,16 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
     finalIndexRef.current = finalIndex;
 
     setItems(generated);
-    setTranslateX(0); // сброс
+    setTranslateX(0);
     setIsSpinning(true);
   }, [pool]);
 
-  // Анимация с точным расчётом позиции по реальному DOM
+  // Одна анимация прокрутки
   useEffect(() => {
     if (!trackRef.current || items.length === 0 || finalIndexRef.current === -1) return;
 
     const track = trackRef.current;
 
-    // Ждём рендера элементов
     const timeout = setTimeout(() => {
       const finalItem = track.children[finalIndexRef.current] as HTMLElement;
       if (!finalItem) return;
@@ -215,21 +214,18 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
       const itemLeft = finalItem.offsetLeft;
       const itemWidth = finalItem.offsetWidth;
 
-      // Точное целевое положение — центрируем финальный элемент
       const targetTranslate = itemLeft - (containerWidth / 2 - itemWidth / 2);
-
-      // Стартовое положение — далеко слева
       const startTranslate = targetTranslate + containerWidth * 5; // большой разгон
 
       let startTime: number | null = null;
-      const duration = 3500; // 3.5 сек для драматичности
+      const duration = 3500; // 3.5 сек — драматично, но не долго
 
       const animate = (timestamp: number) => {
         if (!startTime) startTime = timestamp;
         const elapsed = timestamp - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        // Ease-out expo — очень быстро в начале, очень медленно в конце
+        // Ease-out expo: быстро → очень медленно
         const ease = 1 - Math.pow(2, -10 * progress);
         const currentTranslate = startTranslate - (startTranslate - targetTranslate) * ease;
 
@@ -238,6 +234,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
         if (progress < 1) {
           animationFrameRef.current = requestAnimationFrame(animate);
         } else {
+          // Финальная остановка
           setTranslateX(targetTranslate);
           setIsSpinning(false);
 
@@ -246,15 +243,16 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
             onComplete(finalPetRef.current);
           }
 
+          // Закрытие через 1.8 секунды после полной остановки
           setTimeout(() => {
             onClose();
             document.body.style.overflow = '';
-          }, 2000);
+          }, 1800);
         }
       };
 
       animationFrameRef.current = requestAnimationFrame(animate);
-    }, 150); // даём время на рендер и измерение
+    }, 150);
 
     return () => {
       clearTimeout(timeout);
@@ -294,7 +292,6 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
               ))}
             </div>
 
-            {/* Фиксированная направляющая */}
             <div className="case-opening-pointer" />
           </div>
         </div>
