@@ -171,63 +171,72 @@ interface CaseOpeningAnimationProps {
 }
 
 function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimationProps) {
-  const [currentPet, setCurrentPet] = useState<Pet | null>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [items, setItems] = useState<Pet[]>([]);
   const [isSpinning, setIsSpinning] = useState(true);
   const finalPetRef = useRef<Pet | null>(null);
-  const animationStage = useRef(0); // 0 - fast, 1 - slow, 2 - stop
-  const intervalRef = useRef<number | undefined>(undefined);
+  const finalIndexRef = useRef<number>(-1);
   const completedRef = useRef(false);
 
+  // Генерация длинной ленты + выбор финального
   useEffect(() => {
     const finalPet = pool[Math.floor(Math.random() * pool.length)];
     finalPetRef.current = finalPet;
 
-    setIsSpinning(true);
-    setCurrentPet(null);
-    animationStage.current = 0;
+    const repeatCount = 12; // очень длинная лента для скорости
+    const generated: Pet[] = [];
+    for (let i = 0; i < repeatCount; i++) {
+      generated.push(...pool);
+    }
 
-    const fastInterval = 50;   // очень быстро первые 1.2 сек
-    const slowInterval = 140;  // замедление 1.8 сек
-    const totalDuration = 3000;
+    // Финальный элемент размещаем ближе к концу (чтобы было ощущение долгой прокрутки)
+    const finalIndex = generated.length - Math.floor(generated.length / 4); // примерно 75% ленты
+    generated[finalIndex] = finalPet;
+    finalIndexRef.current = finalIndex;
 
-    let elapsed = 0;
+    setItems(generated);
+  }, [pool]);
 
-    const update = () => {
-      elapsed += animationStage.current === 0 ? fastInterval : slowInterval;
+  // Прокрутка + точная остановка
+  useEffect(() => {
+    if (!trackRef.current || items.length === 0 || finalIndexRef.current === -1) return;
 
-      // Меняем иконку
-      const randomIndex = Math.floor(Math.random() * pool.length);
-      setCurrentPet(pool[randomIndex]);
+    const track = trackRef.current;
+    const finalItem = track.children[finalIndexRef.current] as HTMLElement;
 
-      // Переходы фаз
-      if (elapsed >= 1200 && animationStage.current === 0) {
-        animationStage.current = 1;
-      }
+    if (!finalItem) return;
 
-      if (elapsed >= totalDuration) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = undefined;
+    const timer = setTimeout(() => {
+      // Сначала прокручиваем быстро до почти финала
+      track.scrollTo({
+        left: finalItem.offsetLeft - track.clientWidth * 0.8,
+        behavior: 'instant',
+      });
 
-        setCurrentPet(finalPet);
-        setIsSpinning(false);
+      // Запускаем плавную прокрутку к финальному
+      setTimeout(() => {
+        finalItem.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'center',
+        });
 
-        if (!completedRef.current) {
-          completedRef.current = true;
-          onComplete(finalPet);
-        }
+        // Резкий стоп через 3 секунды
+        setTimeout(() => {
+          setIsSpinning(false);
 
-        setTimeout(onClose, 1800);
-      }
-    };
+          if (!completedRef.current && finalPetRef.current) {
+            completedRef.current = true;
+            onComplete(finalPetRef.current);
+          }
 
-    intervalRef.current = window.setInterval(update, fastInterval);
+          setTimeout(onClose, 1800);
+        }, 3000);
+      }, 200);
+    }, 100); // ждём рендера
 
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [pool, onComplete, onClose]);
-
-  const rarity = currentPet ? RARITY_CONFIG[currentPet.rarity] : null;
+    return () => clearTimeout(timer);
+  }, [items, onComplete, onClose]);
 
   return (
     <motion.div
@@ -239,94 +248,61 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
     >
       <motion.div
         className="case-opening-content"
-        initial={{ scale: 0.7, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', damping: 12 }}
+        initial={{ scale: 0.8 }}
+        animate={{ scale: 1 }}
+        transition={{ type: 'spring', bounce: 0.3 }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{
-          fontSize: '1.8rem',
-          fontWeight: 'bold',
-          color: 'gold',
-          marginBottom: '30px',
-          textShadow: '0 0 15px gold',
-        }}>
-          ОТКРЫТИЕ КЕЙСА...
-        </div>
+        <div className="case-opening-header">🎲 КЕЙС ОТКРЫВАЕТСЯ...</div>
 
-        <div style={{
-          height: '240px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-        }}>
-          <AnimatePresence mode="wait">
-            {currentPet && (
+        <div className="case-opening-carousel">
+          <div
+            ref={trackRef}
+            className="case-opening-track"
+            style={{
+              display: 'flex',
+              overflowX: 'hidden',
+              scrollSnapType: 'x mandatory',
+              scrollBehavior: 'smooth',
+              gap: '24px',
+              padding: '0 50vw',
+              margin: '0 -50vw',
+              width: '100vw',
+              height: '140px',
+              alignItems: 'center',
+            }}
+          >
+            {items.map((pet, idx) => (
               <motion.div
-                key={currentPet.id + (isSpinning ? '-spin' : '-final')}
-                initial={{ scale: 0.3, rotate: -180, opacity: 0 }}
-                animate={{
-                  scale: isSpinning ? [0.9, 1.25, 0.9] : 1.6,
-                  rotate: isSpinning ? [0, 1440] : 0,  // 4 полных оборота
-                  opacity: 1,
-                  y: isSpinning ? [0, -40, 0, -20, 0] : 0,
-                  boxShadow: isSpinning 
-                    ? '0 0 40px rgba(255,255,255,0.3)'
-                    : '0 0 100px gold, inset 0 0 40px gold',
-                }}
-                exit={{ scale: 0.3, opacity: 0 }}
-                transition={{
-                  duration: isSpinning ? 0.15 : 1.2,
-                  ease: isSpinning ? 'linear' : 'backOut',
-                  repeat: isSpinning ? Infinity : 0,
-                  repeatType: 'reverse',
-                }}
+                key={`${pet.id}-${idx}`}
+                className="case-opening-item"
                 style={{
-                  border: `6px solid ${rarity?.color || '#ffd700'}`,
-                  borderRadius: '28px',
-                  padding: '30px 50px',
-                  background: 'linear-gradient(145deg, #1e1e2e, #0a0a1a)',
-                  backdropFilter: 'blur(12px)',
-                  textAlign: 'center',
-                  minWidth: '240px',
-                  maxWidth: '320px',
+                  borderColor: RARITY_CONFIG[pet.rarity].color,
+                  flex: '0 0 100px',
+                  scrollSnapAlign: 'center',
+                  boxShadow: pet.id === finalPetRef.current?.id && !isSpinning 
+                    ? '0 0 60px gold' 
+                    : '0 0 20px rgba(0,0,0,0.5)',
                 }}
+                animate={
+                  !isSpinning && pet.id === finalPetRef.current?.id
+                    ? { scale: [1, 1.4, 1], rotate: [0, 10, -10, 0] }
+                    : {}
+                }
+                transition={{ duration: 0.8, ease: 'backOut' }}
               >
-                <div style={{ fontSize: '8rem', lineHeight: '1' }}>{currentPet.emoji}</div>
-                <div style={{
-                  fontSize: '2.2rem',
-                  fontWeight: '900',
-                  marginTop: '20px',
-                  color: rarity?.color || '#fff',
-                  textShadow: '0 0 15px currentColor',
-                }}>
-                  {currentPet.name.toUpperCase()}
-                </div>
-                {!isSpinning && (
-                  <div style={{
-                    fontSize: '1.6rem',
-                    color: rarity?.color,
-                    marginTop: '16px',
-                    fontWeight: 'bold',
-                    textShadow: '0 0 10px currentColor',
-                  }}>
-                    {rarity?.name.toUpperCase()}
-                  </div>
-                )}
+                <div style={{ fontSize: '4rem' }}>{pet.emoji}</div>
+                <span style={{ fontSize: '0.9rem', marginTop: '8px' }}>{pet.name}</span>
               </motion.div>
-            )}
-          </AnimatePresence>
+            ))}
+          </div>
+
+          {/* Стрелка/центр для визуальной фиксации */}
+          <div className="case-opening-center" />
         </div>
 
-        <div style={{
-          marginTop: '40px',
-          fontSize: '1.6rem',
-          fontWeight: 'bold',
-          color: isSpinning ? '#888' : 'gold',
-          textShadow: '0 0 12px currentColor',
-        }}>
-          {isSpinning ? 'КРУТИТСЯ НА ПОЛНУЮ...' : `ВЫПАЛ: ${finalPetRef.current?.name.toUpperCase()}`}
+        <div className="case-opening-hint">
+          {isSpinning ? 'КРУТИТСЯ НА МАКСИМУМЕ...' : `ВЫПАЛ: ${finalPetRef.current?.name.toUpperCase()}`}
         </div>
       </motion.div>
     </motion.div>
