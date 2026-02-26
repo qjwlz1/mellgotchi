@@ -178,25 +178,27 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
   const finalIndexRef = useRef<number>(-1);
   const completedRef = useRef(false);
 
-  // Генерация ленты
+  // Генерация новой ленты каждый раз
   useEffect(() => {
     const finalPet = pool[Math.floor(Math.random() * pool.length)];
     finalPetRef.current = finalPet;
 
-    const repeatCount = 12;
+    const repeatCount = 15; // ещё длиннее для ощущения скорости
     const generated: Pet[] = [];
     for (let i = 0; i < repeatCount; i++) {
       generated.push(...pool);
     }
 
-    const finalIndex = Math.floor(generated.length * 0.78);
+    // Финальный предмет ближе к концу ленты (80%)
+    const finalIndex = Math.floor(generated.length * 0.8);
     generated[finalIndex] = finalPet;
     finalIndexRef.current = finalIndex;
 
     setItems(generated);
+    setIsSpinning(true); // всегда заново запускаем анимацию
   }, [pool]);
 
-  // Запуск анимации прокрутки
+  // Управление прокруткой
   useEffect(() => {
     if (!trackRef.current || items.length === 0 || finalIndexRef.current === -1) return;
 
@@ -205,12 +207,17 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
 
     if (!finalItem) return;
 
+    // Сбрасываем позицию прокрутки перед стартом
+    track.scrollLeft = 0;
+
     const timer = setTimeout(() => {
+      // Быстрый старт — прокручиваем почти до финала
       track.scrollTo({
-        left: finalItem.offsetLeft - track.clientWidth * 0.7,
+        left: finalItem.offsetLeft - track.clientWidth * 0.6,
         behavior: 'instant',
       });
 
+      // Плавная прокрутка к центру финального предмета
       setTimeout(() => {
         finalItem.scrollIntoView({
           behavior: 'smooth',
@@ -218,6 +225,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
           inline: 'center',
         });
 
+        // Остановка анимации
         setTimeout(() => {
           setIsSpinning(false);
 
@@ -226,12 +234,13 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
             onComplete(finalPetRef.current);
           }
 
+          // Закрытие окна через 1.8 сек после остановки
           setTimeout(() => {
             onClose();
             document.body.style.overflow = '';
           }, 1800);
-        }, 3000);
-      }, 300);
+        }, 3200); // время полной прокрутки
+      }, 400);
     }, 100);
 
     return () => clearTimeout(timer);
@@ -248,32 +257,35 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
       >
         <div className="case-opening-header">🎲 ОТКРЫТИЕ КЕЙСА...</div>
 
-        <div className="case-opening-carousel">
-          <div
-            ref={trackRef}
-            className="case-opening-track"
-          >
-            {items.map((pet, idx) => (
-              <motion.div
-                key={`${pet.id}-${idx}`}
-                className="case-opening-item"
-                style={{
-                  borderColor: RARITY_CONFIG[pet.rarity].color,
-                }}
-                animate={
-                  !isSpinning && pet.id === finalPetRef.current?.id
-                    ? { scale: [1, 1.35, 1], rotate: [0, 8, -8, 0] }
-                    : {}
-                }
-                transition={{ duration: 0.8, ease: 'backOut' }}
-              >
-                <div className="case-opening-emoji">{pet.emoji}</div>
-                <span className="case-opening-name">{pet.name}</span>
-              </motion.div>
-            ))}
-          </div>
+        <div className="case-opening-carousel-wrapper">
+          <div className="case-opening-carousel">
+            <div
+              ref={trackRef}
+              className="case-opening-track"
+            >
+              {items.map((pet, idx) => (
+                <motion.div
+                  key={`${pet.id}-${idx}`}
+                  className="case-opening-item"
+                  style={{
+                    borderColor: RARITY_CONFIG[pet.rarity].color,
+                  }}
+                  animate={
+                    !isSpinning && pet.id === finalPetRef.current?.id
+                      ? { scale: [1, 1.4, 1], rotate: [0, 10, -10, 0] }
+                      : {}
+                  }
+                  transition={{ duration: 0.8, ease: 'backOut' }}
+                >
+                  <div className="case-opening-emoji">{pet.emoji}</div>
+                  <span className="case-opening-name">{pet.name}</span>
+                </motion.div>
+              ))}
+            </div>
 
-          <div className="case-opening-center-marker" />
+            {/* Фиксированная направляющая в центре */}
+            <div className="case-opening-pointer" />
+          </div>
         </div>
 
         <div className="case-opening-hint">
