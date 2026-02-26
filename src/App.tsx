@@ -189,7 +189,6 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
       generated.push(...pool);
     }
 
-    // Финальный ближе к концу (75–80% ленты)
     const finalIndex = Math.floor(generated.length * 0.78);
     generated[finalIndex] = finalPet;
     finalIndexRef.current = finalIndex;
@@ -207,13 +206,11 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
     if (!finalItem) return;
 
     const timer = setTimeout(() => {
-      // Быстрый старт — сразу почти до конца
       track.scrollTo({
         left: finalItem.offsetLeft - track.clientWidth * 0.7,
         behavior: 'instant',
       });
 
-      // Плавная прокрутка к финалу
       setTimeout(() => {
         finalItem.scrollIntoView({
           behavior: 'smooth',
@@ -221,7 +218,6 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
           inline: 'center',
         });
 
-        // Остановка через 3 секунды
         setTimeout(() => {
           setIsSpinning(false);
 
@@ -232,7 +228,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
 
           setTimeout(() => {
             onClose();
-            document.body.style.overflow = ''; // возвращаем скролл
+            document.body.style.overflow = '';
           }, 1800);
         }, 3000);
       }, 300);
@@ -311,7 +307,7 @@ function Navbar({ currentSection, onSectionChange }: {
   );
 }
 
-// ==================== WHEEL SCREEN (для начального кейса) ====================
+// ==================== WHEEL SCREEN ====================
 function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: {
   onComplete: (pet: Pet) => void;
   starterCaseOpened: boolean;
@@ -376,7 +372,7 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: {
       <div className="wheel-content">
         <motion.div
           className="wheel-drum"
-          animate={isSpinning ? { rotate: [0, 360 * 5], scale: [1, 1.1, 1] } : {}}
+          animate={isSpinning ? { rotate: [0, 360 * 4], scale: [1, 1.05, 1, 1.03, 1] } : {}}
           transition={{ duration: 2.5, ease: 'easeOut' }}
         >
           <div className="wheel-display">
@@ -387,11 +383,11 @@ function WheelScreen({ onComplete, starterCaseOpened, showDropNotification }: {
                   initial={{ scale: 0.6, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.6, opacity: 0 }}
-                  transition={{ duration: 0.25, type: 'spring' }}
+                  transition={{ duration: 0.25, type: 'spring', stiffness: 300 }}
                   className="wheel-result"
                   style={{
                     background: `${RARITY_CONFIG[displayPet.rarity].color}30`,
-                    border: isSpinning ? 'none' : `3px solid ${RARITY_CONFIG[displayPet.rarity].color}`,
+                    border: isSpinning ? 'none' : `2px solid ${RARITY_CONFIG[displayPet.rarity].color}`,
                   }}
                 >
                   <span className="wheel-emoji">{displayPet.emoji}</span>
