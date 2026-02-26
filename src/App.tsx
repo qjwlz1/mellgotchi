@@ -180,75 +180,84 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
   const animationFrameRef = useRef<number | null>(null);
   const completedRef = useRef(false);
 
-  // Генерация ленты + выбор финального
+  // Генерация ленты
   useEffect(() => {
     const finalPet = pool[Math.floor(Math.random() * pool.length)];
     finalPetRef.current = finalPet;
 
-    const repeatCount = 12;
+    const repeatCount = 15;
     const generated: Pet[] = [];
     for (let i = 0; i < repeatCount; i++) {
       generated.push(...pool);
     }
 
-    // Финальный предмет ближе к концу
     const finalIndex = Math.floor(generated.length * 0.78);
     generated[finalIndex] = finalPet;
     finalIndexRef.current = finalIndex;
 
     setItems(generated);
-    setTranslateX(0); // сброс позиции
+    setTranslateX(0); // сброс
     setIsSpinning(true);
   }, [pool]);
 
-  // Анимация прокрутки
+  // Анимация с точным расчётом позиции по реальному DOM
   useEffect(() => {
     if (!trackRef.current || items.length === 0 || finalIndexRef.current === -1) return;
 
     const track = trackRef.current;
-    const itemWidth = 100 + 20; // ширина item + gap
-    const finalOffset = finalIndexRef.current * itemWidth;
-    const containerWidth = track.clientWidth;
-    const targetTranslate = finalOffset - (containerWidth / 2 - itemWidth / 2);
 
-    // Стартовое положение — далеко слева
-    const startTranslate = targetTranslate + containerWidth * 4; // большой разгон
+    // Ждём рендера элементов
+    const timeout = setTimeout(() => {
+      const finalItem = track.children[finalIndexRef.current] as HTMLElement;
+      if (!finalItem) return;
 
-    let startTime: number | null = null;
-    const duration = 3200; // 3.2 секунды
+      const containerWidth = track.clientWidth;
+      const itemLeft = finalItem.offsetLeft;
+      const itemWidth = finalItem.offsetWidth;
 
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const elapsed = timestamp - startTime;
-      const progress = Math.min(elapsed / duration, 1);
+      // Точное целевое положение — центрируем финальный элемент
+      const targetTranslate = itemLeft - (containerWidth / 2 - itemWidth / 2);
 
-      // Ease-out cubic — быстро в начале, медленно в конце
-      const ease = 1 - Math.pow(1 - progress, 3);
-      const currentTranslate = startTranslate - (startTranslate - targetTranslate) * ease;
+      // Стартовое положение — далеко слева
+      const startTranslate = targetTranslate + containerWidth * 5; // большой разгон
 
-      setTranslateX(currentTranslate);
+      let startTime: number | null = null;
+      const duration = 3500; // 3.5 сек для драматичности
 
-      if (progress < 1) {
-        animationFrameRef.current = requestAnimationFrame(animate);
-      } else {
-        setTranslateX(targetTranslate);
-        setIsSpinning(false);
+      const animate = (timestamp: number) => {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+        const progress = Math.min(elapsed / duration, 1);
 
-        if (!completedRef.current && finalPetRef.current) {
-          completedRef.current = true;
-          onComplete(finalPetRef.current);
+        // Ease-out expo — очень быстро в начале, очень медленно в конце
+        const ease = 1 - Math.pow(2, -10 * progress);
+        const currentTranslate = startTranslate - (startTranslate - targetTranslate) * ease;
+
+        setTranslateX(currentTranslate);
+
+        if (progress < 1) {
+          animationFrameRef.current = requestAnimationFrame(animate);
+        } else {
+          setTranslateX(targetTranslate);
+          setIsSpinning(false);
+
+          if (!completedRef.current && finalPetRef.current) {
+            completedRef.current = true;
+            onComplete(finalPetRef.current);
+          }
+
+          setTimeout(() => {
+            onClose();
+            document.body.style.overflow = '';
+          }, 2000);
         }
+      };
 
-        setTimeout(() => {
-          onClose();
-          document.body.style.overflow = '';
-        }, 1800);
-      }
-    };
-
-    animationFrameRef.current = requestAnimationFrame(animate);
+      animationFrameRef.current = requestAnimationFrame(animate);
+    }, 150); // даём время на рендер и измерение
 
     return () => {
+      clearTimeout(timeout);
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
   }, [items, onComplete, onClose]);
@@ -274,12 +283,9 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
               {items.map((pet, idx) => (
                 <div
                   key={`${pet.id}-${idx}`}
-                  className="case-opening-item"
+                  className={`case-opening-item ${!isSpinning && pet.id === finalPetRef.current?.id ? 'winner' : ''}`}
                   style={{
                     borderColor: RARITY_CONFIG[pet.rarity].color,
-                    boxShadow: !isSpinning && pet.id === finalPetRef.current?.id
-                      ? '0 0 40px gold, inset 0 0 20px gold'
-                      : 'none',
                   }}
                 >
                   <div className="case-opening-emoji">{pet.emoji}</div>
@@ -288,7 +294,7 @@ function CaseOpeningAnimation({ pool, onComplete, onClose }: CaseOpeningAnimatio
               ))}
             </div>
 
-            {/* Фиксированная направляющая в центре */}
+            {/* Фиксированная направляющая */}
             <div className="case-opening-pointer" />
           </div>
         </div>

@@ -918,7 +918,11 @@ body {
   white-space: nowrap;
 }
 
-/* Фиксированная направляющая (рамка в центре) */
+.case-opening-item.winner {
+  transform: scale(1.3);
+  box-shadow: 0 0 40px gold, inset 0 0 20px gold;
+  z-index: 5;
+}
 .case-opening-pointer {
   position: absolute;
   top: 50%;
@@ -929,9 +933,9 @@ body {
   border: 4px solid var(--accent-gold);
   border-radius: 20px;
   pointer-events: none;
-  box-shadow: 0 0 30px var(--accent-gold);
+  box-shadow: 0 0 40px var(--accent-gold);
+  background: rgba(255,215,0,0.08);
   z-index: 10;
-  background: rgba(255, 215, 0, 0.05);
 }
 
 /* Подсветка при остановке */
